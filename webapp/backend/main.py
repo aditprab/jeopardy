@@ -3,9 +3,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from backend.db import init_pool, close_pool
-from backend.board import generate_board, get_clue
-from backend.answer import check_answer
+from .db import init_pool, close_pool
+from .board import generate_board, get_clue
+from .answer import check_answer
 
 
 @asynccontextmanager

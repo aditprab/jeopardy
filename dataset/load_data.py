@@ -15,7 +15,7 @@ DB_CONFIG = dict(
     password="jeopardy",
 )
 
-DATA_DIR = Path(__file__).parent / "dataset" / "jeopardy_dataset_seasons_1-41"
+DATA_DIR = Path(__file__).parent / "jeopardy_dataset_seasons_1-41"
 
 # Map season files to season numbers for air_date -> season lookup
 SEASON_DATE_RANGES = {}  # populated from scoring data

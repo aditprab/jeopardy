@@ -1,5 +1,5 @@
 import random
-from backend.db import get_conn, put_conn
+from .db import get_conn, put_conn
 
 # Value sets by era for each round
 ROUND_1_VALUE_SETS = [

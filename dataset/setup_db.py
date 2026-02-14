@@ -14,7 +14,7 @@ DB_CONFIG = dict(
 
 
 def main():
-    schema_sql = Path(__file__).parent / "schema.sql"
+    schema_sql = Path(__file__).parent.parent / "schema.sql"
     conn = psycopg2.connect(**DB_CONFIG)
     conn.autocommit = True
     cur = conn.cursor()
