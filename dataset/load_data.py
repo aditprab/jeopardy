@@ -21,6 +21,18 @@ DATA_DIR = Path(__file__).parent / "jeopardy_dataset_seasons_1-41"
 SEASON_DATE_RANGES = {}  # populated from scoring data
 
 
+def clean_text(value):
+    """Normalize common escape artifacts from TSV text fields."""
+    if value is None:
+        return None
+    text = value.strip()
+    # Convert escaped quotes/backslashes from source files.
+    text = text.replace(r"\\", "\\")
+    text = text.replace(r"\"", '"')
+    text = text.replace(r"\'", "'")
+    return text
+
+
 def parse_round(value):
     """Normalize round values to integers."""
     mapping = {"single": 1, "double": 2, "triple": 3, "final": 4}
@@ -66,7 +78,7 @@ def load_clues(conn, filepath, source, season_lookup):
     # Collect new categories
     new_categories = set()
     for row in rows:
-        cat = row["category"]
+        cat = clean_text(row["category"])
         if cat not in category_cache:
             new_categories.add(cat)
 
@@ -107,14 +119,15 @@ def load_clues(conn, filepath, source, season_lookup):
     clue_batch = []
     for row in rows:
         game_id = game_cache[(row["air_date"], source)]
-        category_id = category_cache[row["category"]]
+        category = clean_text(row["category"])
+        category_id = category_cache[category]
         rnd = parse_round(row["round"])
         clue_value = int(row["clue_value"])
         dd_val = int(row["daily_double_value"])
         daily_double_value = dd_val if dd_val != 0 else None
-        answer = row["answer"].replace("\\", "")
-        question = row["question"].replace("\\", "")
-        comments = row["comments"] or None
+        answer = clean_text(row["answer"])
+        question = clean_text(row["question"])
+        comments = clean_text(row["comments"]) or None
 
         # Merge per-clue notes into game notes if present
         clue_batch.append((
