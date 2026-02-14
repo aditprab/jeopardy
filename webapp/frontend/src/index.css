@@ -512,6 +512,76 @@ body {
   text-shadow: 0 0 12px rgba(245, 197, 24, 0.2);
 }
 
+.appeal-block {
+  margin: 12px 0 18px;
+}
+
+.appeal-input {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.22);
+  color: white;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+.appeal-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
+}
+
+.appeal-btn {
+  width: 100%;
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef1f8;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.appeal-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.appeal-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.appeal-error {
+  color: #fca5a5;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.appeal-result {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.appeal-result.overturned {
+  color: #86efac;
+}
+
+.appeal-result.denied {
+  color: rgba(255, 255, 255, 0.72);
+}
+
 /* ============================================
    Game Over
    ============================================ */

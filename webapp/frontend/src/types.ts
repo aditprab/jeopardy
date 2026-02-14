@@ -25,4 +25,17 @@ export interface ClueDetail {
 export interface AnswerResult {
   correct: boolean;
   expected: string;
+  attempt_id?: number;
+}
+
+export interface AppealResult {
+  appeal_id: number;
+  final_correct: boolean;
+  overturn: boolean;
+  reason_code: string;
+  reason: string;
+  confidence: number;
+  expected: string;
+  trace_id: string;
+  status: 'decided';
 }

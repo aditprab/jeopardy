@@ -15,7 +15,9 @@ From the repo root:
 ```sh
 source .venv/bin/activate
 pip install -r webapp/backend/requirements.txt
-uvicorn webapp.backend.main:app --reload
+cp webapp/backend/.env.example webapp/backend/.env
+# edit webapp/backend/.env with real values
+uvicorn webapp.backend.main:app --reload --env-file webapp/backend/.env
 ```
 
 Runs on http://localhost:8000.
