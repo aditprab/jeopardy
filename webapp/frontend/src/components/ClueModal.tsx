@@ -13,6 +13,16 @@ interface Props {
 
 type Phase = 'loading' | 'wager' | 'clue' | 'result';
 
+function formatAirDate(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function ClueModal({ clueId, value, isDailyDouble, currentScore, roundMax, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [clue, setClue] = useState<ClueDetail | null>(null);
@@ -124,6 +134,7 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
         {phase === 'clue' && clue && (
           <div className="modal-clue">
             <div className="clue-category">{clue.category} - ${effectiveValue}</div>
+            <div className="clue-air-date">This clue aired on: {formatAirDate(clue.air_date)}</div>
             <div className="clue-text">{clue.clue_text}</div>
             <input
               ref={inputRef}

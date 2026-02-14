@@ -22,6 +22,66 @@ uvicorn webapp.backend.main:app --reload --env-file webapp/backend/.env
 
 Runs on http://localhost:8000.
 
+## Deploy Data To Railway (Postgres)
+
+From repo root, clone local DB -> Railway DB:
+
+```sh
+.venv/bin/python webapp/backend/deploy/export_local_to_remote.py \
+  --target-url "postgresql://...railway..." \
+  --drop-target \
+  --yes
+```
+
+Notes:
+- `--drop-target` is destructive on the target DB.
+- Script requires `pg_dump` and `psql` installed.
+
+## Deploy To Railway
+
+Deploy backend and frontend as two separate Railway services from this repo.
+
+### Backend service
+
+- Root directory: repo root
+- Build command:
+
+```sh
+pip install -r webapp/backend/requirements.txt
+```
+
+- Start command:
+
+```sh
+uvicorn webapp.backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+- Required env vars:
+  - `DATABASE_URL` (from Railway Postgres)
+  - `DB_SSLMODE=require` (recommended if not already present in URL query)
+  - `OPENAI_API_KEY`
+  - `JUDGE_MODEL` (optional)
+  - `JUDGE_TIMEOUT_MS` (optional)
+  - `CORS_ORIGINS` (set to frontend Railway URL, comma-separated if multiple)
+
+### Frontend service
+
+- Root directory: `webapp/frontend`
+- Build command:
+
+```sh
+npm ci && npm run build
+```
+
+- Start command:
+
+```sh
+npm run preview -- --host 0.0.0.0 --port $PORT
+```
+
+- Required env vars:
+  - `VITE_API_BASE_URL` = your backend Railway public URL
+
 ## Frontend
 
 ```sh

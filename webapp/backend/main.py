@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
@@ -33,9 +34,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+cors_origins_raw = os.getenv("CORS_ORIGINS", "*").strip()
+cors_origins = (
+    ["*"]
+    if cors_origins_raw == "*"
+    else [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

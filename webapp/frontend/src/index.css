@@ -211,12 +211,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
 }
 
 .board-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
+  min-width: 720px;
 }
 
 .board-row.headers {
@@ -350,6 +355,13 @@ body {
   line-height: 1.6;
   margin-bottom: 32px;
   color: #e8ecf6;
+}
+
+.clue-air-date {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 16px;
+  letter-spacing: 0.4px;
 }
 
 /* Inputs */
@@ -599,4 +611,190 @@ body {
   color: var(--gold);
   text-shadow: 0 0 20px rgba(245, 197, 24, 0.3);
   letter-spacing: 1px;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 900px) {
+  .title {
+    font-size: 3.2rem;
+    letter-spacing: 3px;
+    text-align: center;
+    padding: 0 12px;
+  }
+
+  .round-buttons {
+    width: min(560px, 92vw);
+    flex-direction: column;
+  }
+
+  .round-btn {
+    width: 100%;
+  }
+
+  .game-screen {
+    padding: 12px;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .scoreboard {
+    margin-left: auto;
+  }
+
+  .board-row {
+    min-width: 660px;
+  }
+
+  .category-header {
+    font-size: 0.72rem;
+    padding: 10px 6px;
+    min-height: 64px;
+  }
+
+  .clue-cell {
+    font-size: 1.2rem;
+    min-height: 62px;
+    padding: 14px 6px;
+  }
+
+  .modal {
+    width: 94%;
+    padding: 28px 20px;
+  }
+
+  .clue-text {
+    font-size: 1.18rem;
+    margin-bottom: 24px;
+  }
+
+  .clue-air-date {
+    font-size: 0.76rem;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .start-screen {
+    gap: 30px;
+    padding: 20px 12px;
+  }
+
+  .title {
+    font-size: 2.3rem;
+    letter-spacing: 2px;
+  }
+
+  .loading {
+    font-size: 1.05rem;
+  }
+
+  .game-screen {
+    padding: 10px;
+  }
+
+  .top-bar {
+    align-items: stretch;
+  }
+
+  .new-game-btn {
+    width: 100%;
+    order: 2;
+  }
+
+  .scoreboard {
+    width: 100%;
+    justify-content: space-between;
+    order: 1;
+    margin-left: 0;
+  }
+
+  .score-value {
+    font-size: 1.4rem;
+  }
+
+  .board {
+    gap: 5px;
+  }
+
+  .board-row {
+    gap: 5px;
+    min-width: 590px;
+  }
+
+  .board-row.headers {
+    min-height: 62px;
+  }
+
+  .category-header {
+    font-size: 0.64rem;
+    letter-spacing: 0.35px;
+    line-height: 1.18;
+    min-height: 56px;
+    padding: 8px 5px;
+  }
+
+  .clue-cell {
+    font-size: 1rem;
+    min-height: 52px;
+    padding: 10px 4px;
+  }
+
+  .modal {
+    width: 96%;
+    padding: 22px 14px;
+    border-radius: 14px;
+  }
+
+  .dd-banner {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
+
+  .clue-category {
+    font-size: 0.68rem;
+    letter-spacing: 1.6px;
+    margin-bottom: 14px;
+  }
+
+  .clue-text {
+    font-size: 1.02rem;
+    line-height: 1.45;
+    margin-bottom: 16px;
+  }
+
+  .clue-air-date {
+    font-size: 0.72rem;
+    margin-bottom: 10px;
+  }
+
+  .clue-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .submit-btn,
+  .skip-btn {
+    width: 100%;
+    padding: 11px 14px;
+  }
+
+  .response-input {
+    margin-bottom: 14px;
+  }
+
+  .result-banner {
+    font-size: 1.35rem;
+    margin-bottom: 10px;
+  }
+
+  .result-value {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+  }
 }

@@ -20,6 +20,7 @@ export interface ClueDetail {
   value: number;
   clue_text: string;
   expected_response: string;
+  air_date: string;
 }
 
 export interface AnswerResult {

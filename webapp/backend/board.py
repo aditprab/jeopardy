@@ -93,9 +93,10 @@ def get_clue(clue_id: int) -> dict | None:
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT c.id, cat.name, c.clue_value, c.answer, c.question
+                SELECT c.id, cat.name, c.clue_value, c.answer, c.question, g.air_date
                 FROM clues c
                 JOIN categories cat ON cat.id = c.category_id
+                JOIN games g ON g.id = c.game_id
                 WHERE c.id = %s
             """, (clue_id,))
             row = cur.fetchone()
@@ -107,6 +108,7 @@ def get_clue(clue_id: int) -> dict | None:
                 "value": row[2],
                 "clue_text": row[3],
                 "expected_response": row[4],
+                "air_date": row[5],
             }
     finally:
         put_conn(conn)
