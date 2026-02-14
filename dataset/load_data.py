@@ -112,8 +112,8 @@ def load_clues(conn, filepath, source, season_lookup):
         clue_value = int(row["clue_value"])
         dd_val = int(row["daily_double_value"])
         daily_double_value = dd_val if dd_val != 0 else None
-        answer = row["answer"]
-        question = row["question"]
+        answer = row["answer"].replace("\\", "")
+        question = row["question"].replace("\\", "")
         comments = row["comments"] or None
 
         # Merge per-clue notes into game notes if present
