@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: jeopardy-postgres
+    environment:
+      POSTGRES_DB: jeopardy
+      POSTGRES_USER: jeopardy
+      POSTGRES_PASSWORD: jeopardy
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

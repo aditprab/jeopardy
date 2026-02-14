@@ -1,0 +1,4 @@
+dataset/jeopardy_dataset_seasons_1-41/
+.venv/
+.DS_Store
+__pycache__/
