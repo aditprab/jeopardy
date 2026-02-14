@@ -1,3 +1,7 @@
+/* ============================================
+   Jeopardy! — Modern Styling
+   ============================================ */
+
 * {
   margin: 0;
   padding: 0;
@@ -5,18 +9,28 @@
 }
 
 :root {
-  --jeopardy-blue: #060CE9;
-  --jeopardy-dark: #000088;
-  --jeopardy-gold: #FFCC00;
-  --cell-border: #000;
-  --bg: #0a0a2e;
+  --navy-deep: #060e2b;
+  --navy: #0b1a3e;
+  --navy-light: #122456;
+  --blue: #1a3a7a;
+  --blue-bright: #2255bb;
+  --gold: #f5c518;
+  --gold-warm: #e6a800;
+  --gold-glow: rgba(245, 197, 24, 0.35);
+  --glass-bg: rgba(15, 25, 60, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 32px rgba(245, 197, 24, 0.12);
+  --radius: 14px;
+  --radius-sm: 10px;
 }
 
 body {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  background: var(--bg);
-  color: white;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--navy-deep);
+  color: #eef1f8;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
@@ -25,58 +39,103 @@ body {
   flex-direction: column;
 }
 
-/* Start Screen */
+/* ============================================
+   Start Screen
+   ============================================ */
 .start-screen {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  gap: 40px;
+  gap: 48px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 45%, rgba(26, 58, 122, 0.55) 0%, transparent 70%),
+    radial-gradient(circle at 50% 50%, rgba(245, 197, 24, 0.06) 0%, transparent 50%),
+    var(--navy-deep);
 }
 
 .title {
-  font-size: 4rem;
+  font-size: 4.5rem;
   font-weight: 900;
-  color: var(--jeopardy-gold);
-  text-shadow: 3px 3px 0 #000;
-  letter-spacing: 4px;
+  color: var(--gold);
+  text-shadow:
+    0 0 40px rgba(245, 197, 24, 0.4),
+    0 0 80px rgba(245, 197, 24, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 6px;
+  text-transform: uppercase;
 }
 
 .round-buttons {
   display: flex;
-  gap: 20px;
+  gap: 24px;
 }
 
 .round-btn {
-  padding: 16px 36px;
-  font-size: 1.25rem;
+  padding: 18px 40px;
+  font-family: inherit;
+  font-size: 1.1rem;
   font-weight: 700;
-  background: var(--jeopardy-blue);
-  color: var(--jeopardy-gold);
-  border: 3px solid var(--jeopardy-gold);
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-bright) 100%);
+  color: var(--gold);
+  border: 2px solid rgba(245, 197, 24, 0.35);
+  border-radius: var(--radius);
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: background 0.15s;
+  letter-spacing: 1.5px;
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .round-btn:hover {
-  background: var(--jeopardy-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft), var(--shadow-glow);
+  border-color: var(--gold);
 }
 
+.round-btn:active {
+  transform: translateY(0);
+}
+
+/* Loading spinner — pulsing dots */
 .loading {
-  font-size: 1.5rem;
-  color: var(--jeopardy-gold);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Game Screen */
+.loading::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+  margin-left: 2px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ============================================
+   Game Screen
+   ============================================ */
 .game-screen {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 12px;
+  padding: 16px 20px;
+  background:
+    radial-gradient(ellipse 100% 80% at 50% 0%, rgba(18, 36, 86, 0.6) 0%, transparent 60%),
+    var(--navy-deep);
 }
 
 .top-bar {
@@ -84,61 +143,80 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 4px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .new-game-btn {
-  padding: 8px 20px;
-  font-size: 0.9rem;
+  padding: 8px 22px;
+  font-family: inherit;
+  font-size: 0.85rem;
   font-weight: 600;
-  background: transparent;
-  color: var(--jeopardy-gold);
-  border: 2px solid var(--jeopardy-gold);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   text-transform: uppercase;
+  letter-spacing: 1px;
+  backdrop-filter: blur(8px);
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .new-game-btn:hover {
-  background: rgba(255, 204, 0, 0.1);
+  color: var(--gold);
+  border-color: rgba(245, 197, 24, 0.4);
+  background: rgba(245, 197, 24, 0.06);
 }
 
-/* Scoreboard */
+/* ============================================
+   Scoreboard
+   ============================================ */
 .scoreboard {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  padding: 10px 24px;
+  border-radius: var(--radius);
 }
 
 .score-label {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #aaa;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .score-value {
   font-size: 1.75rem;
   font-weight: 900;
-  color: var(--jeopardy-gold);
+  color: var(--gold);
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 16px rgba(245, 197, 24, 0.25);
 }
 
 .score-value.negative {
-  color: #ff4444;
+  color: #ef4444;
+  text-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
 }
 
-/* Board */
+/* ============================================
+   Board
+   ============================================ */
 .board {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .board-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  gap: 6px;
 }
 
 .board-row.headers {
@@ -147,198 +225,308 @@ body {
 
 /* Category Header */
 .category-header {
-  background: var(--jeopardy-blue);
-  color: white;
+  background: linear-gradient(180deg, var(--navy-light) 0%, var(--navy) 100%);
+  color: #c8d0e8;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 10px 6px;
-  font-size: 0.85rem;
-  font-weight: 800;
+  padding: 12px 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
   text-transform: uppercase;
-  border: 2px solid var(--cell-border);
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
-  line-height: 1.2;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  line-height: 1.3;
 }
 
-/* Clue Cells */
+/* ============================================
+   Clue Cells
+   ============================================ */
 .clue-cell {
-  background: var(--jeopardy-blue);
-  color: var(--jeopardy-gold);
-  border: 2px solid var(--cell-border);
-  font-size: 1.5rem;
-  font-weight: 900;
+  background: linear-gradient(160deg, var(--blue) 0%, var(--navy-light) 100%);
+  color: var(--gold);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  font-size: 1.4rem;
+  font-weight: 800;
   cursor: pointer;
   padding: 20px 8px;
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
-  transition: background 0.15s;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
   min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .clue-cell:hover:not(.answered) {
-  background: var(--jeopardy-dark);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 20px rgba(245, 197, 24, 0.1);
+  background: linear-gradient(160deg, var(--blue-bright) 0%, var(--blue) 100%);
+}
+
+.clue-cell:active:not(.answered) {
+  transform: translateY(0) scale(1);
 }
 
 .clue-cell.answered {
-  background: var(--jeopardy-dark);
+  background: var(--navy);
   color: transparent;
   cursor: default;
-  opacity: 0.3;
+  opacity: 0.2;
+  border-color: transparent;
+  transition: opacity 0.5s ease, background 0.5s ease;
 }
 
-/* Modal */
+/* ============================================
+   Modal
+   ============================================ */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(3, 6, 20, 0.8);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: overlay-fade 0.25s ease-out;
+}
+
+@keyframes overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .modal {
-  background: var(--jeopardy-blue);
-  border: 4px solid var(--jeopardy-gold);
-  border-radius: 12px;
-  padding: 40px;
-  max-width: 600px;
+  background: linear-gradient(170deg, rgba(18, 36, 86, 0.85) 0%, rgba(11, 26, 62, 0.92) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 44px 40px;
+  max-width: 620px;
   width: 90%;
   text-align: center;
+  backdrop-filter: blur(24px);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(245, 197, 24, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: modal-slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes modal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-loading {
-  font-size: 1.25rem;
-  color: var(--jeopardy-gold);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--gold);
 }
 
 /* Clue display */
 .clue-category {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 20px;
+  letter-spacing: 2.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 24px;
 }
 
 .clue-text {
-  font-size: 1.4rem;
-  line-height: 1.5;
-  margin-bottom: 28px;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  color: #e8ecf6;
 }
 
+/* Inputs */
 .response-input {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 1.1rem;
-  border: 2px solid var(--jeopardy-gold);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
+  padding: 14px 18px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
   color: white;
   outline: none;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .response-input:focus {
-  border-color: #fff;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
 }
 
 .response-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Buttons */
+.clue-buttons {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
 }
 
 .submit-btn {
-  padding: 10px 32px;
-  font-size: 1rem;
+  padding: 12px 36px;
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 700;
-  background: var(--jeopardy-gold);
-  color: var(--jeopardy-dark);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-warm) 100%);
+  color: var(--navy-deep);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  box-shadow: 0 4px 16px rgba(245, 197, 24, 0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .submit-btn:hover {
-  background: #e6b800;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(245, 197, 24, 0.35);
 }
 
-/* Daily Double */
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.skip-btn {
+  padding: 12px 36px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.skip-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================
+   Daily Double
+   ============================================ */
 .dd-banner {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 900;
-  color: var(--jeopardy-gold);
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
-  margin-bottom: 24px;
-  letter-spacing: 3px;
+  color: var(--gold);
+  text-shadow:
+    0 0 30px rgba(245, 197, 24, 0.45),
+    0 0 60px rgba(245, 197, 24, 0.15);
+  margin-bottom: 28px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
 }
 
 .wager-prompt {
-  font-size: 1.1rem;
-  margin-bottom: 16px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin-bottom: 18px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .wager-input {
-  width: 160px;
-  padding: 10px 16px;
-  font-size: 1.25rem;
+  width: 180px;
+  padding: 12px 18px;
+  font-family: inherit;
+  font-size: 1.3rem;
   font-weight: 700;
   text-align: center;
-  border: 2px solid var(--jeopardy-gold);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  color: var(--jeopardy-gold);
+  border: 1.5px solid rgba(245, 197, 24, 0.35);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--gold);
   outline: none;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .wager-input:focus {
-  border-color: #fff;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
 }
 
-/* Result */
+/* ============================================
+   Result
+   ============================================ */
 .result-banner {
   font-size: 2rem;
   font-weight: 900;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .result-banner.correct {
-  color: #44ff44;
+  color: #34d399;
+  text-shadow: 0 0 24px rgba(52, 211, 153, 0.3);
 }
 
 .result-banner.incorrect {
-  color: #ff4444;
+  color: #f87171;
+  text-shadow: 0 0 24px rgba(248, 113, 113, 0.3);
+}
+
+.result-banner.skipped {
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .expected {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
 }
 
 .result-value {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--jeopardy-gold);
-  margin-bottom: 24px;
+  font-weight: 800;
+  color: var(--gold);
+  margin-bottom: 28px;
+  text-shadow: 0 0 12px rgba(245, 197, 24, 0.2);
 }
 
-/* Game Over */
+/* ============================================
+   Game Over
+   ============================================ */
 .game-over {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 24px;
+  gap: 20px;
+  padding: 28px;
 }
 
 .game-over-text {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--jeopardy-gold);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(245, 197, 24, 0.3);
+  letter-spacing: 1px;
 }

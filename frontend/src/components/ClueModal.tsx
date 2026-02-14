@@ -18,6 +18,7 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
   const [clue, setClue] = useState<ClueDetail | null>(null);
   const [response, setResponse] = useState('');
   const [result, setResult] = useState<AnswerResult | null>(null);
+  const [skipped, setSkipped] = useState(false);
   const [wager, setWager] = useState(value);
   const [wagerInput, setWagerInput] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +51,12 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
     if (!response.trim()) return;
     const res = await submitAnswer(clueId, response);
     setResult(res);
+    setPhase('result');
+  };
+
+  const handleSkip = () => {
+    setSkipped(true);
+    setResult({ correct: false, expected: clue?.expected_response ?? '' });
     setPhase('result');
   };
 
@@ -97,22 +104,27 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
               placeholder="What is..."
               className="response-input"
             />
-            <button onClick={handleSubmit} className="submit-btn">Submit</button>
+            <div className="clue-buttons">
+              <button onClick={handleSubmit} className="submit-btn">Submit</button>
+              {!isDailyDouble && <button onClick={handleSkip} className="skip-btn">Skip</button>}
+            </div>
           </div>
         )}
 
         {phase === 'result' && result && (
           <div className="modal-result">
-            <div className={`result-banner ${result.correct ? 'correct' : 'incorrect'}`}>
-              {result.correct ? 'CORRECT!' : 'INCORRECT'}
+            <div className={`result-banner ${result.correct ? 'correct' : skipped ? 'skipped' : 'incorrect'}`}>
+              {result.correct ? 'CORRECT!' : skipped ? 'SKIPPED' : 'INCORRECT'}
             </div>
             <div className="expected">
               {result.correct ? '' : `Correct response: ${result.expected}`}
             </div>
-            <div className="result-value">
-              {result.correct ? '+' : '-'}${effectiveValue.toLocaleString()}
-            </div>
-            <button onClick={() => onClose({ correct: result.correct, value: effectiveValue })} className="submit-btn">
+            {!skipped && (
+              <div className="result-value">
+                {result.correct ? '+' : '-'}${effectiveValue.toLocaleString()}
+              </div>
+            )}
+            <button onClick={() => onClose({ correct: result.correct, value: skipped ? 0 : effectiveValue })} className="submit-btn">
               Continue
             </button>
           </div>
