@@ -43,18 +43,7 @@ Deploy backend and frontend as two separate Railway services from this repo.
 
 ### Backend service
 
-- Root directory: repo root
-- Build command:
-
-```sh
-pip install -r webapp/backend/requirements.txt
-```
-
-- Start command:
-
-```sh
-uvicorn webapp.backend.main:app --host 0.0.0.0 --port $PORT
-```
+- Railway config file path: `webapp/backend/railway.toml`
 
 - Required env vars:
   - `DATABASE_URL` (from Railway Postgres)
@@ -66,18 +55,7 @@ uvicorn webapp.backend.main:app --host 0.0.0.0 --port $PORT
 
 ### Frontend service
 
-- Root directory: `webapp/frontend`
-- Build command:
-
-```sh
-npm ci && npm run build
-```
-
-- Start command:
-
-```sh
-npm run preview -- --host 0.0.0.0 --port $PORT
-```
+- Railway config file path: `webapp/frontend/railway.toml`
 
 - Required env vars:
   - `VITE_API_BASE_URL` = your backend Railway public URL

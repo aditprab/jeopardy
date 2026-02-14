@@ -1,0 +1,6 @@
+[build]
+buildCommand = "cd webapp/frontend && npm ci && npm run build"
+watchPatterns = ["/webapp/frontend/**", "/webapp/frontend/railway.toml"]
+
+[deploy]
+startCommand = "cd webapp/frontend && npm run preview -- --host 0.0.0.0 --port $PORT"
