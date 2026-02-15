@@ -44,6 +44,11 @@ Deploy backend and frontend as two separate Railway services from this repo.
 ### Backend service
 
 - Railway config file path: `webapp/backend/railway.toml`
+- CLI deploy command (from repo root):
+
+```sh
+railway up webapp/backend --path-as-root --service backend
+```
 
 - Required env vars:
   - `DATABASE_URL` (from Railway Postgres)
@@ -56,6 +61,11 @@ Deploy backend and frontend as two separate Railway services from this repo.
 ### Frontend service
 
 - Railway config file path: `webapp/frontend/railway.toml`
+- CLI deploy command (from repo root):
+
+```sh
+railway up webapp/frontend --path-as-root --service frontend
+```
 
 - Required env vars:
   - `VITE_API_BASE_URL` = your backend Railway public URL
