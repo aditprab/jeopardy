@@ -9,6 +9,15 @@ type Screen = 'start' | 'loading' | 'board';
 
 const ROUND_MAX = { 1: 1000, 2: 2000 };
 
+function FooterCredit() {
+  return (
+    <footer className="app-footer">
+      <span>Made with ❤️</span>
+      <span className="app-footer-by">by Adithya Prabhakaran</span>
+    </footer>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start');
   const [board, setBoard] = useState<BoardData | null>(null);
@@ -51,56 +60,65 @@ export default function App() {
 
   if (screen === 'start') {
     return (
-      <div className="start-screen">
-        <h1 className="title">JEOPARDY!</h1>
-        <div className="round-buttons">
-          <button onClick={() => startGame(1)} className="round-btn">Single Jeopardy</button>
-          <button onClick={() => startGame(2)} className="round-btn">Double Jeopardy</button>
+      <>
+        <div className="start-screen">
+          <h1 className="title">JEOPARDY!</h1>
+          <div className="round-buttons">
+            <button onClick={() => startGame(1)} className="round-btn">Single Jeopardy</button>
+            <button onClick={() => startGame(2)} className="round-btn">Double Jeopardy</button>
+          </div>
         </div>
-      </div>
+        <FooterCredit />
+      </>
     );
   }
 
   if (screen === 'loading') {
     return (
-      <div className="start-screen">
-        <h1 className="title">JEOPARDY!</h1>
-        <div className="loading">Generating board...</div>
-      </div>
+      <>
+        <div className="start-screen">
+          <h1 className="title">JEOPARDY!</h1>
+          <div className="loading">Generating board...</div>
+        </div>
+        <FooterCredit />
+      </>
     );
   }
 
   return (
-    <div className="game-screen">
-      <div className="top-bar">
-        <button className="new-game-btn" onClick={() => setScreen('start')}>New Game</button>
-        <Scoreboard score={score} />
-      </div>
-      {board && (
-        <Board
-          board={board}
-          answeredClues={answeredClues}
-          onClueClick={handleClueClick}
-        />
-      )}
-      {allAnswered && (
-        <div className="game-over">
-          <div className="game-over-text">
-            Final Score: {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
-          </div>
-          <button className="round-btn" onClick={() => setScreen('start')}>Play Again</button>
+    <>
+      <div className="game-screen">
+        <div className="top-bar">
+          <button className="new-game-btn" onClick={() => setScreen('start')}>New Game</button>
+          <Scoreboard score={score} />
         </div>
-      )}
-      {activeClue && board && (
-        <ClueModal
-          clueId={activeClue.id}
-          value={activeClue.value}
-          isDailyDouble={activeClue.isDailyDouble}
-          currentScore={score}
-          roundMax={ROUND_MAX[board.round as 1 | 2]}
-          onClose={handleClueClose}
-        />
-      )}
-    </div>
+        {board && (
+          <Board
+            board={board}
+            answeredClues={answeredClues}
+            onClueClick={handleClueClick}
+          />
+        )}
+        {allAnswered && (
+          <div className="game-over">
+            <div className="game-over-text">
+              Final Score: {score < 0 ? '-' : ''}${Math.abs(score).toLocaleString()}
+            </div>
+            <button className="round-btn" onClick={() => setScreen('start')}>Play Again</button>
+          </div>
+        )}
+        {activeClue && board && (
+          <ClueModal
+            clueId={activeClue.id}
+            value={activeClue.value}
+            isDailyDouble={activeClue.isDailyDouble}
+            currentScore={score}
+            roundMax={ROUND_MAX[board.round as 1 | 2]}
+            onClose={handleClueClose}
+          />
+        )}
+      </div>
+      <FooterCredit />
+    </>
   );
 }

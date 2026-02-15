@@ -39,6 +39,24 @@ body {
   flex-direction: column;
 }
 
+.app-footer {
+  position: fixed;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.4px;
+  text-align: center;
+  z-index: 90;
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-footer-by {
+  margin-left: 6px;
+}
+
 /* ============================================
    Start Screen
    ============================================ */
@@ -796,5 +814,10 @@ body {
   .result-value {
     font-size: 1.2rem;
     margin-bottom: 16px;
+  }
+
+  .app-footer {
+    font-size: 0.68rem;
+    bottom: 6px;
   }
 }
