@@ -121,3 +121,36 @@ CREATE INDEX idx_agent_artifacts_run_id ON agent_run_artifacts(agent_run_id);
 CREATE INDEX idx_answer_attempts_clue_id ON answer_attempts(clue_id);
 CREATE INDEX idx_answer_attempts_created_at ON answer_attempts(created_at);
 CREATE INDEX idx_answer_appeals_status ON answer_appeals(status);
+
+-- Daily challenge mode tables
+CREATE TABLE daily_challenges (
+    challenge_date DATE PRIMARY KEY,
+    single_category_name TEXT NOT NULL,
+    single_clue_ids INT[] NOT NULL,
+    double_category_name TEXT NOT NULL,
+    double_clue_ids INT[] NOT NULL,
+    final_category_name TEXT NOT NULL,
+    final_clue_id INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE daily_player_progress (
+    id BIGSERIAL PRIMARY KEY,
+    challenge_date DATE NOT NULL REFERENCES daily_challenges(challenge_date) ON DELETE CASCADE,
+    player_token TEXT NOT NULL,
+    current_score INT NOT NULL DEFAULT 0,
+    answers_json JSONB NOT NULL,
+    final_attempt_id BIGINT REFERENCES answer_attempts(id),
+    final_wager INT,
+    final_response TEXT,
+    final_correct BOOLEAN,
+    final_expected_response TEXT,
+    final_score_delta INT,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (challenge_date, player_token)
+);
+
+CREATE INDEX idx_daily_progress_token ON daily_player_progress(player_token);
+CREATE INDEX idx_daily_progress_challenge_date ON daily_player_progress(challenge_date);

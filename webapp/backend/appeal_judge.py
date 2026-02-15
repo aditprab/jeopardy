@@ -19,14 +19,15 @@ except ImportError:
     from answer import extract_alternates, normalize
 
 AGENT_NAME = "appeal_judge"
-AGENT_VERSION = "v2"
-POLICY_VERSION = "appeal_policy_v2"
-PROMPT_VERSION = "appeal_prompt_v1"
+AGENT_VERSION = "v3"
+POLICY_VERSION = "appeal_policy_v3"
+PROMPT_VERSION = "appeal_prompt_v2"
 
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_TIMEOUT_MS = 7000
 MIN_JUSTIFICATION_LEN = 280
 HIGH_CONFIDENCE_THRESHOLD = 0.85
+SAME_ENTITY_THRESHOLD = 0.9
 FUZZ_THRESHOLD = 88
 MAX_REASON_CHARS = 600
 
@@ -53,11 +54,14 @@ ALLOWED_REASON_CODES = {
     "empty_response",
     "exact_match",
     "last_name_match",
+    "minor_typo_match",
     "insufficient_specificity",
     "strong_fuzzy_match",
     "no_match",
     "semantic_equivalence",
 }
+ALLOWED_MATCH_TYPES = {"exact", "alias", "last_name", "minor_typo", "no_match"}
+OVERTURN_MATCH_TYPES = {"exact", "alias", "last_name", "minor_typo"}
 
 _client: OpenAI | None = None
 logger = logging.getLogger(__name__)
@@ -290,7 +294,8 @@ def _llm_decision(
                     {
                         "type": "input_text",
                         "text": (
-                            "You are a Jeopardy answer-appeal judge. "
+                            "You are a strict Jeopardy answer-appeal judge. "
+                            "Decide if the user likely knew the same intended entity. "
                             "Return only valid JSON matching the schema."
                         ),
                     }
@@ -304,9 +309,15 @@ def _llm_decision(
                         "text": (
                             "Policy:\n"
                             "1) Last-name-only is usually acceptable for person clues.\n"
-                            "2) Subset-only responses for non-person entities should be denied.\n"
-                            "3) Allow clear aliases and equivalent forms.\n"
-                            "4) Be conservative when uncertain.\n\n"
+                            "2) Minor typos should be accepted only when they clearly indicate the same entity.\n"
+                            "3) Deny when the response could plausibly indicate a different valid entity.\n"
+                            "4) Subset-only responses for non-person entities should be denied.\n"
+                            "5) Allow clear aliases and equivalent forms.\n"
+                            "6) Be conservative when uncertain.\n\n"
+                            "Examples:\n"
+                            "- Expected: Warren Buffett | User: Buffet => Accept (minor_typo)\n"
+                            "- Expected: Stephen Hawking | User: Hawkins => Accept (minor_typo)\n"
+                            "- Expected: Marlon Brando | User: Brendan => Deny (no_match)\n\n"
                             f"Clue: {clue_text}\n"
                             f"Expected: {expected_response}\n"
                             f"User response: {user_response}\n"
@@ -330,6 +341,11 @@ def _llm_decision(
                             "type": "string",
                             "enum": sorted(ALLOWED_REASON_CODES),
                         },
+                        "match_type": {
+                            "type": "string",
+                            "enum": sorted(ALLOWED_MATCH_TYPES),
+                        },
+                        "same_entity_likelihood": {"type": "number"},
                         "reason": {"type": "string"},
                         "confidence": {"type": "number"},
                     },
@@ -337,6 +353,8 @@ def _llm_decision(
                         "overturn",
                         "final_correct",
                         "reason_code",
+                        "match_type",
+                        "same_entity_likelihood",
                         "reason",
                         "confidence",
                     ],
@@ -349,9 +367,13 @@ def _llm_decision(
     payload = json.loads(raw_text)
     logger.info("Appeal judge LLM request completed (model=%s)", model)
     confidence = _coerce_confidence(payload.get("confidence"))
+    same_entity_likelihood = _coerce_confidence(payload.get("same_entity_likelihood"))
     reason_code = payload.get("reason_code", "no_match")
     if reason_code not in ALLOWED_REASON_CODES:
         reason_code = "no_match"
+    match_type = payload.get("match_type", "no_match")
+    if match_type not in ALLOWED_MATCH_TYPES:
+        match_type = "no_match"
 
     guardrails: list[str] = []
     overturn = bool(payload.get("overturn"))
@@ -365,6 +387,31 @@ def _llm_decision(
             "Appeal judge guardrail applied: low_confidence_no_overturn (confidence=%.3f)",
             confidence,
         )
+    if overturn and same_entity_likelihood < SAME_ENTITY_THRESHOLD:
+        guardrails.append("low_same_entity_no_overturn")
+        overturn = False
+        final_correct = False
+        reason_code = "no_match"
+        logger.warning(
+            "Appeal judge guardrail applied: low_same_entity_no_overturn (same_entity_likelihood=%.3f)",
+            same_entity_likelihood,
+        )
+    if overturn and match_type not in OVERTURN_MATCH_TYPES:
+        guardrails.append("invalid_match_type_no_overturn")
+        overturn = False
+        final_correct = False
+        reason_code = "no_match"
+        logger.warning(
+            "Appeal judge guardrail applied: invalid_match_type_no_overturn (match_type=%s)",
+            match_type,
+        )
+    if overturn:
+        reason_code = {
+            "exact": "exact_match",
+            "alias": "semantic_equivalence",
+            "last_name": "last_name_match",
+            "minor_typo": "minor_typo_match",
+        }.get(match_type, reason_code)
 
     return AppealDecision(
         overturn=overturn,
@@ -380,6 +427,8 @@ def _llm_decision(
             "provider": "openai",
             "response_id": getattr(response, "id", None),
             "parsed": payload,
+            "match_type": match_type,
+            "same_entity_likelihood": same_entity_likelihood,
         },
     )
 

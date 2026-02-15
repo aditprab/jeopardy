@@ -1,9 +1,36 @@
-import type { BoardData, ClueDetail, AnswerResult, AppealResult } from './types';
+import type {
+  BoardData,
+  ClueDetail,
+  AnswerResult,
+  AppealResult,
+  DailyChallengeData,
+  DailyAnswerResult,
+  DailyFinalResult,
+  DailyAppealApplyResult,
+} from './types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const PLAYER_TOKEN_KEY = 'jeopardy_player_token';
 
 function apiUrl(path: string): string {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
+function getPlayerToken(): string | null {
+  return localStorage.getItem(PLAYER_TOKEN_KEY);
+}
+
+function updatePlayerToken(res: Response): void {
+  const token = res.headers.get('X-Player-Token');
+  if (token) {
+    localStorage.setItem(PLAYER_TOKEN_KEY, token);
+  }
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getPlayerToken();
+  if (!token) return {};
+  return { 'X-Player-Token': token };
 }
 
 export async function fetchBoard(round: number): Promise<BoardData> {
@@ -41,5 +68,82 @@ export async function submitAppeal(
     }),
   });
   if (!res.ok) throw new Error('Failed to submit appeal');
+  return res.json();
+}
+
+export async function fetchDailyChallenge(): Promise<DailyChallengeData> {
+  const res = await fetch(apiUrl('/api/daily-challenge'), {
+    headers: authHeaders(),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to fetch daily challenge');
+  return res.json();
+}
+
+export async function submitDailyAnswer(
+  stage: 'single' | 'double',
+  index: number,
+  response: string,
+  skipped = false,
+): Promise<DailyAnswerResult> {
+  const res = await fetch(apiUrl('/api/daily-challenge/answer'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ stage, index, response, skipped }),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to submit daily answer');
+  return res.json();
+}
+
+export async function submitDailyFinal(
+  wager: number,
+  response: string,
+): Promise<DailyFinalResult> {
+  const res = await fetch(apiUrl('/api/daily-challenge/final'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ wager, response }),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to submit daily final');
+  return res.json();
+}
+
+export async function applyDailyAppeal(
+  stage: 'single' | 'double' | 'final',
+  attemptId: number,
+  index?: number,
+): Promise<DailyAppealApplyResult> {
+  const res = await fetch(apiUrl('/api/daily-challenge/apply-appeal'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({
+      stage,
+      index: stage === 'final' ? null : index,
+      attempt_id: attemptId,
+    }),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to apply daily appeal result');
+  return res.json();
+}
+
+export async function resetDailyChallenge(): Promise<{ reset: boolean; deleted_rows: number }> {
+  const res = await fetch(apiUrl('/api/daily-challenge/reset'), {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to reset daily challenge progress');
   return res.json();
 }
