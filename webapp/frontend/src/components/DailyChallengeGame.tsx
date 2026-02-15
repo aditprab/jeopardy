@@ -509,7 +509,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
           </div>
         )}
 
-        {hasStarted && (step.stage === 'final' || finalResult) && (
+        {hasStarted && !answerResult && (finalResult || step.stage === 'final') && (
           <div className="daily-card">
             <div className="dd-banner">FINAL JEOPARDY</div>
             <div className="clue-category">{challenge.final_clue.category}</div>
