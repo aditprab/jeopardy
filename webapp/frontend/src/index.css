@@ -68,6 +68,18 @@ body {
   margin-left: 6px;
 }
 
+.app-footer-link {
+  margin-left: 6px;
+  color: rgba(255, 221, 154, 0.82);
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.app-footer-link:hover {
+  text-decoration: underline;
+  color: rgba(255, 228, 170, 0.95);
+}
+
 .landing-screen {
   display: flex;
   flex-direction: column;

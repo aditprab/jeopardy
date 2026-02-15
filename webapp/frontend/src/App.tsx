@@ -8,7 +8,15 @@ function FooterCredit() {
   return (
     <footer className="app-footer">
       <span>Made with ❤️</span>
-      <span className="app-footer-by">by Adithya Prabhakaran</span>
+      <span className="app-footer-by">by</span>
+      <a
+        className="app-footer-link"
+        href="https://www.linkedin.com/in/adithyaprabhakaran/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Adithya Prabhakaran
+      </a>
     </footer>
   );
 }
