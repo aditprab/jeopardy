@@ -20,11 +20,7 @@ function Landing({ onSelect }: { onSelect: (mode: Exclude<Mode, 'landing'>) => v
       <div className="mode-grid">
         <button className="mode-card" onClick={() => onSelect('daily')}>
           <span className="mode-title">Daily Challenge</span>
-          <span className="mode-description">One global game each day: Single, Double, then Final.</span>
-        </button>
-        <button className="mode-card" onClick={() => onSelect('classic')}>
-          <span className="mode-title">Classic Boards</span>
-          <span className="mode-description">Play the existing board mode with selectable rounds.</span>
+          <span className="mode-description">One challenge each day: Single, Double, then Final.</span>
         </button>
       </div>
     </div>

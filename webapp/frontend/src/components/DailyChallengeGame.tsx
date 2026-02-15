@@ -80,6 +80,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const [appealError, setAppealError] = useState('');
   const [appealResult, setAppealResult] = useState<AppealResult | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
+  const [shareStatus, setShareStatus] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -333,6 +334,38 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     }
   };
 
+  const formatScore = (score: number): string => {
+    const abs = Math.abs(score).toLocaleString();
+    return score < 0 ? `-$${abs}` : `$${abs}`;
+  };
+
+  const buildShareText = (data: DailyChallengeData): string => {
+    const scoreText = formatScore(data.progress.current_score);
+    const dateText = formatChallengeDate(data.challenge_date);
+    const shareUrl = window.location.origin;
+    return `I scored ${scoreText} on Jeopardy Daily Challenge (${dateText}).\nPlay today's challenge: ${shareUrl}`;
+  };
+
+  const handleShare = async () => {
+    if (!challenge) return;
+    const text = buildShareText(challenge);
+    setShareStatus('');
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Jeopardy Daily Challenge',
+          text,
+        });
+        setShareStatus('Shared.');
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      setShareStatus('Copied to clipboard.');
+    } catch {
+      setShareStatus('Unable to share right now.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="start-screen">
@@ -556,7 +589,8 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             <div className="game-over-text">
               Final Score: {challenge.progress.current_score < 0 ? '-' : ''}${Math.abs(challenge.progress.current_score).toLocaleString()}
             </div>
-            <button className="round-btn" onClick={onBack}>Back Home</button>
+            <button className="submit-btn" onClick={handleShare}>Share Result</button>
+            {shareStatus && <div className="share-status">{shareStatus}</div>}
           </div>
         )}
 

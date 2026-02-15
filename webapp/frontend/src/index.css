@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
 /* ============================================
    Jeopardy! — Modern Styling
    ============================================ */
@@ -9,28 +11,36 @@
 }
 
 :root {
-  --navy-deep: #060e2b;
-  --navy: #0b1a3e;
-  --navy-light: #122456;
-  --blue: #1a3a7a;
-  --blue-bright: #2255bb;
-  --gold: #f5c518;
-  --gold-warm: #e6a800;
-  --gold-glow: rgba(245, 197, 24, 0.35);
-  --glass-bg: rgba(15, 25, 60, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 32px rgba(245, 197, 24, 0.12);
+  --navy-deep: #060913;
+  --navy: #0f1628;
+  --navy-light: #16223c;
+  --blue: #3053a4;
+  --blue-bright: #4d79d9;
+  --gold: #ffcf70;
+  --gold-warm: #f5b74a;
+  --gold-glow: rgba(255, 207, 112, 0.36);
+  --text-primary: #f3f7ff;
+  --text-secondary: rgba(223, 233, 255, 0.72);
+  --glass-bg: rgba(17, 25, 46, 0.58);
+  --glass-border: rgba(180, 198, 255, 0.15);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  --shadow-soft: 0 16px 42px rgba(2, 8, 25, 0.5);
+  --shadow-glow: 0 0 48px rgba(255, 207, 112, 0.12);
   --radius: 14px;
   --radius-sm: 10px;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: var(--navy-deep);
-  color: #eef1f8;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(77, 121, 217, 0.2), transparent 40%),
+    radial-gradient(circle at 92% 8%, rgba(255, 207, 112, 0.12), transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(63, 94, 190, 0.14), transparent 42%),
+    linear-gradient(180deg, #060913 0%, #080d18 48%, #060913 100%);
+  color: var(--text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -73,9 +83,9 @@ body {
 }
 
 .mode-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 360px));
-  gap: 18px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .mode-card {
@@ -90,6 +100,7 @@ body {
   text-align: left;
   cursor: pointer;
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  width: min(360px, 92vw);
 }
 
 .mode-card:hover {
@@ -127,14 +138,15 @@ body {
 }
 
 .title {
+  font-family: 'Sora', 'Manrope', sans-serif;
   font-size: 4.5rem;
-  font-weight: 900;
-  color: var(--gold);
+  font-weight: 800;
+  color: #ffe3a8;
   text-shadow:
-    0 0 40px rgba(245, 197, 24, 0.4),
-    0 0 80px rgba(245, 197, 24, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.6);
-  letter-spacing: 6px;
+    0 0 36px rgba(255, 207, 112, 0.28),
+    0 0 76px rgba(255, 207, 112, 0.11),
+    0 8px 28px rgba(0, 0, 0, 0.55);
+  letter-spacing: 5px;
   text-transform: uppercase;
 }
 
@@ -211,30 +223,37 @@ body {
 
 .daily-screen {
   min-height: 100vh;
-  padding: 16px 20px 32px;
+  padding: 18px 20px 28px;
   background:
-    radial-gradient(ellipse 95% 85% at 50% 0%, rgba(18, 36, 86, 0.55) 0%, transparent 60%),
-    var(--navy-deep);
+    radial-gradient(ellipse 95% 68% at 50% -6%, rgba(68, 103, 192, 0.26) 0%, transparent 68%),
+    radial-gradient(ellipse 60% 38% at 50% 100%, rgba(255, 207, 112, 0.08) 0%, transparent 72%),
+    transparent;
 }
 
 .daily-shell {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .daily-header {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(18px);
   text-align: center;
-  padding: 12px;
+  padding: 14px 16px;
 }
 
 .daily-header h2 {
-  font-size: 1.5rem;
-  color: var(--gold);
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+  font-family: 'Sora', 'Manrope', sans-serif;
+  font-size: 1.38rem;
+  color: #ffe0a3;
+  letter-spacing: 0.6px;
+  margin-bottom: 2px;
 }
 
 .daily-header p {
@@ -277,10 +296,12 @@ body {
 }
 
 .daily-dots-shell {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 11px 14px;
+  border-radius: 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(16px);
 }
 
 .daily-dots-track {
@@ -291,30 +312,34 @@ body {
 }
 
 .daily-dot {
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  background: rgba(211, 224, 255, 0.18);
+  border: 1px solid rgba(194, 212, 255, 0.16);
+  transition: transform 0.18s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .daily-dot.done {
-  background: linear-gradient(180deg, #ffd76d 0%, #f3ba2f 100%);
-  border-color: rgba(255, 216, 110, 0.75);
-  box-shadow: 0 0 12px rgba(243, 186, 47, 0.45);
+  transform: scale(1.08);
+  background: linear-gradient(180deg, #ffe3aa 0%, #ffc864 100%);
+  border-color: rgba(255, 216, 150, 0.86);
+  box-shadow: 0 0 9px rgba(255, 200, 100, 0.58);
 }
 
 .daily-dot.final {
-  width: 11px;
-  height: 11px;
+  width: 7px;
+  height: 7px;
 }
 
 .daily-dots-sections {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  justify-content: flex-start;
+  gap: 12px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 8px;
 }
 
@@ -323,24 +348,24 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
+  min-height: 32px;
   justify-content: flex-end;
   padding-right: 14px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  flex: 1;
+  border-right: 1px solid rgba(197, 212, 255, 0.16);
+  flex: 0 0 auto;
 }
 
 .daily-dot-group.final {
   padding-right: 0;
   border-right: none;
-  flex: 0.5;
+  flex: 0 0 auto;
 }
 
 .daily-dot-label {
-  font-size: 0.66rem;
-  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.62rem;
+  color: rgba(219, 230, 255, 0.56);
   text-transform: uppercase;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.9px;
 }
 
 .daily-dot-row {
@@ -352,17 +377,38 @@ body {
 
 .daily-answer-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 2px;
+}
+
+.daily-answer-actions .submit-btn,
+.daily-answer-actions .skip-btn {
+  flex: 1;
 }
 
 .daily-card {
-  background: linear-gradient(170deg, rgba(18, 36, 86, 0.85) 0%, rgba(11, 26, 62, 0.94) 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 26px 22px;
+  background:
+    linear-gradient(160deg, rgba(16, 26, 48, 0.7) 0%, rgba(10, 17, 34, 0.84) 100%),
+    var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(18px);
+  padding: 24px 22px;
   text-align: center;
+  animation: lift-in 0.22s ease-out;
+}
+
+@keyframes lift-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .daily-brief {
@@ -386,10 +432,13 @@ body {
 }
 
 .daily-value {
-  font-size: 1.9rem;
+  font-family: 'Sora', 'Manrope', sans-serif;
+  font-size: 1.8rem;
   font-weight: 800;
-  color: var(--gold);
-  margin-bottom: 10px;
+  color: #ffd891;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+  text-shadow: 0 0 14px rgba(255, 200, 100, 0.28);
 }
 
 .daily-result {
@@ -415,34 +464,45 @@ body {
   font-size: 0.95rem;
 }
 
+.share-status {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: rgba(226, 236, 255, 0.78);
+}
+
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 4px;
-  margin-bottom: 16px;
+  padding: 10px 4px;
+  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  backdrop-filter: blur(6px);
 }
 
 .new-game-btn {
-  padding: 8px 22px;
+  padding: 9px 18px;
   font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(206, 221, 255, 0.08);
+  color: rgba(234, 241, 255, 0.9);
+  border: 1px solid rgba(188, 206, 255, 0.3);
   border-radius: var(--radius-sm);
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  backdrop-filter: blur(8px);
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  letter-spacing: 0.9px;
+  backdrop-filter: blur(10px);
+  transition: transform 0.16s ease, color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
 .new-game-btn:hover {
-  color: var(--gold);
-  border-color: rgba(245, 197, 24, 0.4);
-  background: rgba(245, 197, 24, 0.06);
+  transform: translateY(-1px);
+  color: #fff3d5;
+  border-color: rgba(255, 207, 112, 0.52);
+  background: rgba(255, 207, 112, 0.12);
 }
 
 /* ============================================
@@ -452,11 +512,12 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: var(--glass-bg);
+  background: linear-gradient(160deg, rgba(18, 27, 49, 0.68) 0%, rgba(11, 19, 37, 0.88) 100%);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(16px);
-  padding: 10px 24px;
-  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(14px);
+  padding: 9px 20px;
+  border-radius: 12px;
 }
 
 .score-label {
@@ -618,47 +679,50 @@ body {
 
 /* Clue display */
 .clue-category {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 2.5px;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 24px;
+  letter-spacing: 2px;
+  color: rgba(214, 227, 255, 0.66);
+  margin-bottom: 16px;
 }
 
 .clue-text {
-  font-size: 1.35rem;
-  font-weight: 500;
-  line-height: 1.6;
-  margin-bottom: 32px;
-  color: #e8ecf6;
+  font-size: 1.24rem;
+  font-weight: 600;
+  line-height: 1.55;
+  margin-bottom: 22px;
+  color: #f1f6ff;
+  letter-spacing: 0.1px;
 }
 
 .clue-air-date {
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 16px;
-  letter-spacing: 0.4px;
+  font-size: 0.76rem;
+  color: rgba(214, 227, 255, 0.58);
+  margin-bottom: 14px;
+  letter-spacing: 0.45px;
 }
 
 /* Inputs */
 .response-input {
   width: 100%;
-  padding: 14px 18px;
+  padding: 13px 14px;
   font-family: inherit;
-  font-size: 1.05rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius);
-  background: rgba(0, 0, 0, 0.25);
-  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid rgba(185, 204, 255, 0.32);
+  border-radius: 12px;
+  background: rgba(8, 13, 26, 0.66);
+  color: #f5f8ff;
   outline: none;
-  margin-bottom: 20px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-bottom: 16px;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
 }
 
 .response-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
+  border-color: rgba(255, 213, 125, 0.84);
+  background: rgba(8, 13, 26, 0.86);
+  box-shadow: 0 0 0 3px rgba(255, 207, 112, 0.17);
 }
 
 .response-input::placeholder {
@@ -673,24 +737,25 @@ body {
 }
 
 .submit-btn {
-  padding: 12px 36px;
+  padding: 12px 22px;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.87rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-warm) 100%);
-  color: var(--navy-deep);
+  background: linear-gradient(135deg, #ffd992 0%, #ffbf5f 100%);
+  color: #121726;
   border: none;
-  border-radius: var(--radius);
+  border-radius: 11px;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  box-shadow: 0 4px 16px rgba(245, 197, 24, 0.25);
-  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 1.2px;
+  box-shadow: 0 8px 18px rgba(255, 190, 84, 0.22);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
 }
 
 .submit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(245, 197, 24, 0.35);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 22px rgba(255, 190, 84, 0.28);
+  filter: saturate(1.05);
 }
 
 .submit-btn:active {
@@ -698,24 +763,25 @@ body {
 }
 
 .skip-btn {
-  padding: 12px 36px;
+  padding: 11px 22px;
   font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.55);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius);
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: rgba(193, 211, 255, 0.08);
+  color: rgba(233, 241, 255, 0.88);
+  border: 1px solid rgba(184, 202, 255, 0.3);
+  border-radius: 11px;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  letter-spacing: 1.1px;
+  transition: transform 0.14s ease, color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
 }
 
 .skip-btn:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
-  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+  border-color: rgba(221, 233, 255, 0.5);
+  color: #fff;
+  background: rgba(214, 228, 255, 0.13);
 }
 
 /* ============================================
@@ -742,18 +808,18 @@ body {
 
 .wager-input {
   width: 180px;
-  padding: 12px 18px;
+  padding: 12px 14px;
   font-family: inherit;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 700;
   text-align: center;
-  border: 1.5px solid rgba(245, 197, 24, 0.35);
-  border-radius: var(--radius);
-  background: rgba(0, 0, 0, 0.25);
-  color: var(--gold);
+  border: 1px solid rgba(255, 207, 112, 0.48);
+  border-radius: 12px;
+  background: rgba(8, 13, 26, 0.68);
+  color: #ffe3ad;
   outline: none;
   margin-bottom: 20px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .wager-input:focus {
@@ -765,10 +831,10 @@ body {
    Result
    ============================================ */
 .result-banner {
-  font-size: 2rem;
-  font-weight: 900;
-  margin-bottom: 18px;
-  letter-spacing: 2px;
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin-bottom: 14px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
 }
 
@@ -787,18 +853,18 @@ body {
 }
 
 .expected {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   margin-bottom: 14px;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
+  color: rgba(233, 241, 255, 0.86);
+  font-weight: 600;
 }
 
 .result-value {
-  font-size: 1.5rem;
+  font-size: 1.28rem;
   font-weight: 800;
-  color: var(--gold);
-  margin-bottom: 28px;
-  text-shadow: 0 0 12px rgba(245, 197, 24, 0.2);
+  color: #ffd88d;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(255, 207, 112, 0.22);
 }
 
 .appeal-block {
@@ -888,6 +954,7 @@ body {
   color: var(--gold);
   text-shadow: 0 0 20px rgba(245, 197, 24, 0.3);
   letter-spacing: 1px;
+  margin-bottom: 12px;
 }
 
 /* ============================================
@@ -948,8 +1015,8 @@ body {
   }
 
   .daily-dot.final {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
 
   .daily-dot-group {
@@ -957,6 +1024,7 @@ body {
   }
 
   .daily-answer-actions {
+    flex-direction: column;
     gap: 10px;
   }
 
