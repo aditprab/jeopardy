@@ -28,6 +28,7 @@ DEFAULT_TIMEOUT_MS = 7000
 MIN_JUSTIFICATION_LEN = 280
 HIGH_CONFIDENCE_THRESHOLD = 0.85
 FUZZ_THRESHOLD = 88
+MAX_REASON_CHARS = 600
 
 PERSON_INDICATORS = (
     " he ",
@@ -369,7 +370,7 @@ def _llm_decision(
         overturn=overturn,
         final_correct=final_correct,
         reason_code=reason_code,
-        reason=str(payload.get("reason", "Appeal judged."))[:220],
+        reason=str(payload.get("reason", "Appeal judged."))[:MAX_REASON_CHARS],
         confidence=confidence,
         guardrail_flags=guardrails,
         model=model,
