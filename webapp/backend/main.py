@@ -6,23 +6,41 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .db import init_pool, close_pool
-from .board import generate_board, get_clue
-from .answer import check_answer
-from .appeal_judge import (
-    AGENT_NAME,
-    AGENT_VERSION,
-    POLICY_VERSION,
-    judge_appeal,
-)
-from .agent_observability import (
-    RunTimer,
-    add_agent_artifact,
-    create_agent_run,
-    finish_agent_run,
-    log_agent_event,
-)
-from .db import get_conn, put_conn
+try:
+    from .db import init_pool, close_pool, get_conn, put_conn
+    from .board import generate_board, get_clue
+    from .answer import check_answer
+    from .appeal_judge import (
+        AGENT_NAME,
+        AGENT_VERSION,
+        POLICY_VERSION,
+        judge_appeal,
+    )
+    from .agent_observability import (
+        RunTimer,
+        add_agent_artifact,
+        create_agent_run,
+        finish_agent_run,
+        log_agent_event,
+    )
+except ImportError:
+    # Supports running from webapp/backend as module path "main:app".
+    from db import init_pool, close_pool, get_conn, put_conn
+    from board import generate_board, get_clue
+    from answer import check_answer
+    from appeal_judge import (
+        AGENT_NAME,
+        AGENT_VERSION,
+        POLICY_VERSION,
+        judge_appeal,
+    )
+    from agent_observability import (
+        RunTimer,
+        add_agent_artifact,
+        create_agent_run,
+        finish_agent_run,
+        log_agent_event,
+    )
 
 
 @asynccontextmanager

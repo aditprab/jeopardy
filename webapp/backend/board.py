@@ -1,5 +1,8 @@
 import random
-from .db import get_conn, put_conn
+try:
+    from .db import get_conn, put_conn
+except ImportError:
+    from db import get_conn, put_conn
 
 # Value sets by era for each round
 ROUND_1_VALUE_SETS = [

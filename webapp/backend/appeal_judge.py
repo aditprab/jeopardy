@@ -13,7 +13,10 @@ except ImportError:  # pragma: no cover - dependency may be installed after depl
     OpenAI = None  # type: ignore[assignment]
 from thefuzz import fuzz
 
-from .answer import extract_alternates, normalize
+try:
+    from .answer import extract_alternates, normalize
+except ImportError:
+    from answer import extract_alternates, normalize
 
 AGENT_NAME = "appeal_judge"
 AGENT_VERSION = "v2"
