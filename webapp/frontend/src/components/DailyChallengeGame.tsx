@@ -5,6 +5,7 @@ import {
   submitAppeal,
   submitDailyAnswer,
   submitDailyFinal,
+  submitDailyFinalWager,
 } from '../api';
 import type {
   DailyChallengeData,
@@ -119,8 +120,8 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
 
   useEffect(() => {
     if (!challenge) return;
-    if (step.stage === 'final' && !finalResult) {
-      const max = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 1000;
+    if (step.stage === 'final' && !finalResult && challenge.progress.final.wager === null) {
+      const max = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 0;
       setWagerInput(String(Math.max(0, Math.min(max, Math.abs(challenge.progress.current_score)))));
     }
   }, [challenge, step.stage, finalResult]);
@@ -225,11 +226,11 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     }
   };
 
-  const handleSubmitFinal = async () => {
-    if (!challenge || !response.trim()) return;
+  const handleLockFinalWager = async () => {
+    if (!challenge) return;
 
     const wager = Number.parseInt(wagerInput, 10);
-    const maxWager = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 1000;
+    const maxWager = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 0;
     if (Number.isNaN(wager) || wager < 0 || wager > maxWager) {
       setError(`Wager must be between 0 and ${maxWager}.`);
       return;
@@ -238,14 +239,36 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     setSubmitting(true);
     setError('');
     try {
-      const result = await submitDailyFinal(wager, response);
+      await submitDailyFinalWager(wager);
+      const refreshed = await fetchDailyChallenge();
+      setChallenge(refreshed);
+      setWagerInput(String(wager));
+    } catch {
+      setError('Failed to lock final wager.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmitFinal = async () => {
+    if (!challenge || !response.trim()) return;
+
+    if (challenge.progress.final.wager === null) {
+      setError('Lock your wager before submitting Final Jeopardy.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await submitDailyFinal(response);
       setFinalResult(result);
       clearAppealState();
       const updated = structuredClone(challenge);
       updated.progress.final = {
         submitted: true,
         attempt_id: result.attempt_id,
-        wager: result.wager,
+        wager: challenge.progress.final.wager,
         response,
         correct: result.correct,
         expected: result.expected,
@@ -387,7 +410,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
 
   if (!challenge) return null;
 
-  const maxWager = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 1000;
+  const maxWager = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 0;
 
   return (
     <div className="daily-screen">
@@ -512,19 +535,31 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
         {hasStarted && !answerResult && (finalResult || step.stage === 'final') && (
           <div className="daily-card">
             <div className="dd-banner">FINAL JEOPARDY</div>
-            <div className="clue-category">{challenge.final_clue.category}</div>
+            <div className="clue-category">The category is: {challenge.final_clue.category}</div>
             <div className="clue-air-date">Aired on: {formatAirDate(challenge.final_clue.air_date)}</div>
-            <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>
-            <input
-              type="number"
-              className="wager-input"
-              min={0}
-              max={maxWager}
-              value={wagerInput}
-              onChange={(e) => setWagerInput(e.target.value)}
-              disabled={submitting || Boolean(finalResult)}
-            />
-            <div className="clue-text">{challenge.final_clue.clue_text}</div>
+            {challenge.progress.final.wager === null ? (
+              <>
+                <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>
+                <input
+                  type="number"
+                  className="wager-input"
+                  min={0}
+                  max={maxWager}
+                  value={wagerInput}
+                  onChange={(e) => setWagerInput(e.target.value)}
+                  disabled={submitting || Boolean(finalResult)}
+                />
+                <button className="submit-btn" onClick={handleLockFinalWager} disabled={submitting}>
+                  {submitting ? 'Locking...' : 'Lock Wager'}
+                </button>
+              </>
+            ) : (
+              <div className="wager-prompt">Wager Locked: ${challenge.progress.final.wager.toLocaleString()}</div>
+            )}
+
+            {challenge.progress.final.wager !== null && challenge.final_clue.clue_text && (
+              <div className="clue-text">{challenge.final_clue.clue_text}</div>
+            )}
 
             {finalResult ? (
               <div className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}>
@@ -566,7 +601,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   View Final Score
                 </button>
               </div>
-            ) : (
+            ) : challenge.progress.final.wager !== null ? (
               <>
                 <input
                   className="response-input"
@@ -579,7 +614,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   {submitting ? 'Submitting...' : 'Submit Final'}
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         )}
 

@@ -39,12 +39,14 @@ body {
     linear-gradient(180deg, #060913 0%, #080d18 48%, #060913 100%);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -86,6 +88,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   gap: 40px;
   padding: 24px;
   background:
@@ -142,6 +145,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   gap: 48px;
   background:
     radial-gradient(ellipse 80% 60% at 50% 45%, rgba(26, 58, 122, 0.55) 0%, transparent 70%),
@@ -227,6 +231,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 16px 20px;
   background:
     radial-gradient(ellipse 100% 80% at 50% 0%, rgba(18, 36, 86, 0.6) 0%, transparent 60%),
@@ -235,6 +240,7 @@ body {
 
 .daily-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 18px 20px 28px;
   background:
     radial-gradient(ellipse 95% 68% at 50% -6%, rgba(68, 103, 192, 0.26) 0%, transparent 68%),
@@ -1041,6 +1047,9 @@ body {
   }
 
   .top-bar {
+    position: static;
+    top: auto;
+    backdrop-filter: none;
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 12px;

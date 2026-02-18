@@ -6,6 +6,7 @@ import type {
   DailyChallengeData,
   DailyAnswerResult,
   DailyFinalResult,
+  DailyFinalWagerResult,
   DailyAppealApplyResult,
 } from './types';
 
@@ -99,8 +100,23 @@ export async function submitDailyAnswer(
   return res.json();
 }
 
-export async function submitDailyFinal(
+export async function submitDailyFinalWager(
   wager: number,
+): Promise<DailyFinalWagerResult> {
+  const res = await fetch(apiUrl('/api/daily-challenge/final/wager'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ wager }),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to submit daily final wager');
+  return res.json();
+}
+
+export async function submitDailyFinal(
   response: string,
 ): Promise<DailyFinalResult> {
   const res = await fetch(apiUrl('/api/daily-challenge/final'), {
@@ -109,10 +125,10 @@ export async function submitDailyFinal(
       'Content-Type': 'application/json',
       ...authHeaders(),
     },
-    body: JSON.stringify({ wager, response }),
+    body: JSON.stringify({ response }),
   });
   updatePlayerToken(res);
-  if (!res.ok) throw new Error('Failed to submit daily final');
+  if (!res.ok) throw new Error('Failed to submit daily final answer');
   return res.json();
 }
 

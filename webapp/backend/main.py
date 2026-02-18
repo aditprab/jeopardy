@@ -18,6 +18,7 @@ try:
         reset_daily_progress,
         submit_daily_answer,
         submit_daily_final,
+        submit_daily_final_wager,
         today_et,
     )
     from .appeal_judge import (
@@ -46,6 +47,7 @@ except ImportError:
         reset_daily_progress,
         submit_daily_answer,
         submit_daily_final,
+        submit_daily_final_wager,
         today_et,
     )
     from appeal_judge import (
@@ -388,8 +390,11 @@ class DailyAnswerRequest(BaseModel):
 
 
 class DailyFinalRequest(BaseModel):
-    wager: int
     response: str
+
+
+class DailyFinalWagerRequest(BaseModel):
+    wager: int
 
 
 class DailyAppealApplyRequest(BaseModel):
@@ -438,6 +443,27 @@ def daily_answer(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.post("/api/daily-challenge/final/wager")
+def daily_final_wager(
+    req: DailyFinalWagerRequest,
+    response: Response,
+    player_token: str | None = Header(default=None, alias="X-Player-Token"),
+):
+    token = (player_token or "").strip() or str(uuid4())
+    challenge_date = today_et()
+    try:
+        challenge = get_or_create_daily_challenge(challenge_date)
+        result = submit_daily_final_wager(
+            challenge=challenge,
+            player_token=token,
+            wager=req.wager,
+        )
+        response.headers["X-Player-Token"] = token
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/api/daily-challenge/final")
 def daily_final(
     req: DailyFinalRequest,
@@ -451,7 +477,6 @@ def daily_final(
         result = submit_daily_final(
             challenge=challenge,
             player_token=token,
-            wager=req.wager,
             response_text=req.response,
         )
         response.headers["X-Player-Token"] = token

@@ -374,6 +374,8 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
         double_clues = [clue_map[cid] for cid in challenge.double_clue_ids]
         final_clue = clue_map[challenge.final_clue_id]
 
+        final_clue_text = final_clue["clue_text"] if progress["final_wager"] is not None else None
+
         return {
             "challenge_date": challenge.challenge_date.isoformat(),
             "timezone": "America/New_York",
@@ -404,7 +406,7 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
             "final_clue": {
                 "id": final_clue["id"],
                 "category": challenge.final_category_name,
-                "clue_text": final_clue["clue_text"],
+                "clue_text": final_clue_text,
                 "air_date": final_clue["air_date"],
             },
             "progress": _serialize_progress(progress),
@@ -527,15 +529,69 @@ def submit_daily_answer(
         put_conn(conn)
 
 
-def submit_daily_final(
+def submit_daily_final_wager(
     *,
     challenge: DailyChallenge,
     player_token: str,
     wager: int,
-    response_text: str,
 ) -> dict[str, Any]:
     if wager < 0:
         raise ValueError("Wager cannot be negative")
+
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+
+            if progress["completed_at"]:
+                conn.commit()
+                return {
+                    "idempotent": True,
+                    "wager": progress["final_wager"],
+                }
+
+            if any(item is None for item in progress["answers"]["single"]) or any(
+                item is None for item in progress["answers"]["double"]
+            ):
+                raise ValueError("All 10 clues must be answered before Final Jeopardy")
+
+            current_score = progress["current_score"]
+            max_wager = current_score if current_score >= 0 else 0
+            if wager > max_wager:
+                raise ValueError(f"Wager must be between 0 and {max_wager}")
+
+            existing_wager = progress["final_wager"]
+            if existing_wager is not None:
+                conn.commit()
+                return {
+                    "idempotent": True,
+                    "wager": existing_wager,
+                }
+
+            cur.execute(
+                """
+                UPDATE daily_player_progress
+                SET final_wager = %s,
+                    updated_at = now()
+                WHERE id = %s
+                """,
+                (wager, progress["id"]),
+            )
+            conn.commit()
+            return {
+                "idempotent": False,
+                "wager": wager,
+            }
+    finally:
+        put_conn(conn)
+
+
+def submit_daily_final(
+    *,
+    challenge: DailyChallenge,
+    player_token: str,
+    response_text: str,
+) -> dict[str, Any]:
     if not response_text.strip():
         raise ValueError("Final response cannot be empty")
 
@@ -561,10 +617,10 @@ def submit_daily_final(
             ):
                 raise ValueError("All 10 clues must be answered before Final Jeopardy")
 
+            wager = progress["final_wager"]
+            if wager is None:
+                raise ValueError("You must lock your wager before viewing Final Jeopardy")
             current_score = progress["current_score"]
-            max_wager = current_score if current_score >= 0 else 1000
-            if wager > max_wager:
-                raise ValueError(f"Wager must be between 0 and {max_wager}")
 
             clue_map = _fetch_clues(cur, [challenge.final_clue_id])
             clue = clue_map.get(challenge.final_clue_id)

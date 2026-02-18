@@ -56,7 +56,7 @@ export interface DailyCategory {
 export interface DailyFinalClue {
   id: number;
   category: string;
-  clue_text: string;
+  clue_text: string | null;
   air_date: string;
 }
 
@@ -122,6 +122,11 @@ export interface DailyFinalResult {
   wager: number;
   score_delta: number;
   final_score: number;
+}
+
+export interface DailyFinalWagerResult {
+  idempotent: boolean;
+  wager: number | null;
 }
 
 export interface DailyAppealApplyResult {
