@@ -96,6 +96,42 @@ def ensure_daily_schema() -> None:
             )
             cur.execute(
                 """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_wager INT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_response TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_correct BOOLEAN
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_expected_response TEXT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_score_delta INT
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ
+                """
+            )
+            cur.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_daily_progress_token
                 ON daily_player_progress(player_token)
                 """
@@ -288,14 +324,21 @@ def _fetch_clues(cur, clue_ids: list[int]) -> dict[int, dict[str, Any]]:
     return by_id
 
 
-def _load_or_create_progress(cur, challenge_date: date, player_token: str) -> dict[str, Any]:
+def _load_or_create_progress(
+    cur,
+    challenge_date: date,
+    player_token: str,
+    *,
+    for_update: bool = False,
+) -> dict[str, Any]:
+    lock_clause = "FOR UPDATE" if for_update else ""
     cur.execute(
-        """
+        f"""
         SELECT id, current_score, answers_json, final_wager, final_response, final_correct,
                final_expected_response, final_score_delta, completed_at, final_attempt_id
         FROM daily_player_progress
         WHERE challenge_date = %s AND player_token = %s
-        FOR UPDATE
+        {lock_clause}
         """,
         (challenge_date, player_token),
     )
@@ -367,7 +410,7 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
     try:
         with conn.cursor() as cur:
             clue_map = _fetch_clues(cur, challenge.single_clue_ids + challenge.double_clue_ids + [challenge.final_clue_id])
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=False)
             conn.commit()
 
         single_clues = [clue_map[cid] for cid in challenge.single_clue_ids]
@@ -437,7 +480,7 @@ def submit_daily_answer(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
             if progress["completed_at"]:
                 raise ValueError("Daily challenge already completed")
 
@@ -541,7 +584,7 @@ def submit_daily_final_wager(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
 
             if progress["completed_at"]:
                 conn.commit()
@@ -598,7 +641,7 @@ def submit_daily_final(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
 
             if progress["completed_at"]:
                 conn.commit()
@@ -703,7 +746,7 @@ def apply_daily_appeal(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
             answers = progress["answers"]
 
             if stage == "final":
