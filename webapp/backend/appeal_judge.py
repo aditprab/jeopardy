@@ -382,9 +382,17 @@ def _llm_decision(
     if match_type not in ALLOWED_MATCH_TYPES:
         match_type = "no_match"
 
+    reason_text = str(payload.get("reason", "Appeal judged."))[:MAX_REASON_CHARS]
+
     guardrails: list[str] = []
     overturn = bool(payload.get("overturn"))
     final_correct = bool(payload.get("final_correct"))
+    # If either flag says "accept", treat as a positive candidate before guardrails.
+    accept_candidate = overturn or final_correct
+    overturn = accept_candidate
+    if accept_candidate and not bool(payload.get("overturn")) == bool(payload.get("final_correct")):
+        guardrails.append("normalized_accept_flag_consistency")
+
     if overturn and confidence < HIGH_CONFIDENCE_THRESHOLD:
         guardrails.append("low_confidence_no_overturn")
         overturn = False
@@ -417,12 +425,20 @@ def _llm_decision(
     elif reason_code not in REJECT_REASON_CODES:
         reason_code = "no_match"
         guardrails.append("normalized_reject_reason_code")
+    if (
+        "low_confidence_no_overturn" in guardrails
+        or "low_same_entity_no_overturn" in guardrails
+        or "normalized_reject_reason_code" in guardrails
+    ):
+        reason_text = "Appeal denied: response does not meet matching policy."
+    elif "normalized_accept_reason_code" in guardrails:
+        reason_text = "Appeal accepted: response matches the same intended entity."
 
     return AppealDecision(
         overturn=overturn,
         final_correct=final_correct,
         reason_code=reason_code,
-        reason=str(payload.get("reason", "Appeal judged."))[:MAX_REASON_CHARS],
+        reason=reason_text,
         confidence=confidence,
         guardrail_flags=guardrails,
         model=model,
