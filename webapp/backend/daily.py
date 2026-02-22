@@ -142,112 +142,113 @@ def ensure_daily_schema() -> None:
                 ON daily_player_progress(challenge_date)
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS candidate_jd_pairs (
+                    ordinal INT PRIMARY KEY,
+                    single_category_id INT NOT NULL REFERENCES categories(id),
+                    double_category_id INT NOT NULL REFERENCES categories(id),
+                    single_game_id INT NOT NULL REFERENCES games(id),
+                    double_game_id INT NOT NULL REFERENCES games(id),
+                    single_air_date DATE NOT NULL,
+                    double_air_date DATE NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS candidate_finals (
+                    ordinal INT PRIMARY KEY,
+                    final_clue_id INT NOT NULL REFERENCES clues(id),
+                    game_id INT NOT NULL REFERENCES games(id),
+                    air_date DATE NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
         conn.commit()
     finally:
         put_conn(conn)
 
 
-def _select_daily_game(cur, offset: int) -> int:
+def _pick_daily_candidates(
+    cur,
+    *,
+    challenge_date: date,
+) -> tuple[int, int, int, int, int]:
+    day_offset = max(0, (challenge_date - START_DATE).days)
+    cur.execute("SELECT COUNT(*) FROM candidate_jd_pairs")
+    jd_count = int(cur.fetchone()[0] or 0)
+    if jd_count <= 0:
+        raise ValueError("No candidate_jd_pairs rows found. Rebuild candidate pools.")
+    cur.execute("SELECT COUNT(*) FROM candidate_finals")
+    final_count = int(cur.fetchone()[0] or 0)
+    if final_count <= 0:
+        raise ValueError("No candidate_finals rows found. Rebuild candidate pools.")
+
     cur.execute(
         """
-        WITH round1_categories AS (
-            SELECT
-                c.game_id,
-                c.category_id
-            FROM clues c
-            WHERE c.round = 1
-            GROUP BY c.game_id, c.category_id
-            HAVING COUNT(*) = 5
-               AND ARRAY_AGG(c.clue_value ORDER BY c.clue_value) = %s::INT[]
-        ),
-        round1_valid AS (
-            SELECT game_id, COUNT(*) AS cat_count
-            FROM round1_categories
-            GROUP BY game_id
-        ),
-        round2_categories AS (
-            SELECT
-                c.game_id,
-                c.category_id
-            FROM clues c
-            WHERE c.round = 2
-            GROUP BY c.game_id, c.category_id
-            HAVING COUNT(*) = 5
-               AND ARRAY_AGG(c.clue_value ORDER BY c.clue_value) = %s::INT[]
-        ),
-        round2_valid AS (
-            SELECT game_id, COUNT(*) AS cat_count
-            FROM round2_categories
-            GROUP BY game_id
-        ),
-        eligible_games AS (
-            SELECT
-                g.id AS game_id,
-                g.air_date,
-                ROW_NUMBER() OVER (ORDER BY g.air_date ASC, g.id ASC) - 1 AS idx,
-                COUNT(*) OVER () AS total
-            FROM games g
-            JOIN round1_valid r1 ON r1.game_id = g.id
-            JOIN round2_valid r2 ON r2.game_id = g.id
-            WHERE g.air_date >= %s
-              AND r1.cat_count >= 6
-              AND r2.cat_count >= 6
-              AND EXISTS (
-                  SELECT 1
-                  FROM clues cf
-                  WHERE cf.game_id = g.id
-                    AND cf.round = 3
-              )
-        )
-        SELECT game_id, total
-        FROM eligible_games
-        WHERE idx = (%s %% total)
+        SELECT single_game_id, single_category_id, double_game_id, double_category_id
+        FROM candidate_jd_pairs
+        WHERE ordinal = (%s %% %s)
         LIMIT 1
         """,
-        (SINGLE_VALUES, DOUBLE_VALUES, START_DATE, offset),
+        (day_offset, jd_count),
     )
-    row = cur.fetchone()
-    if not row:
-        raise ValueError("No valid games found for daily challenge")
-    return row[0]
+    jd = cur.fetchone()
+    if not jd:
+        raise ValueError("No candidate_jd_pairs rows found. Rebuild candidate pools.")
+
+    cur.execute(
+        """
+        SELECT final_clue_id
+        FROM candidate_finals
+        WHERE ordinal = (%s %% %s)
+        LIMIT 1
+        """,
+        (day_offset, final_count),
+    )
+    fj = cur.fetchone()
+    if not fj:
+        raise ValueError("No candidate_finals rows found. Rebuild candidate pools.")
+    return int(jd[0]), int(jd[1]), int(jd[2]), int(jd[3]), int(fj[0])
 
 
-def _select_category_for_game(
+def _select_category_by_id(
     cur,
     *,
     game_id: int,
+    category_id: int,
     round_num: int,
     values: list[int],
 ) -> tuple[str, list[int]]:
     cur.execute(
         """
-        WITH category_groups AS (
-            SELECT
-                cat.name,
-                c.category_id,
-                ARRAY_AGG(c.id ORDER BY c.clue_value) AS clue_ids
-            FROM clues c
-            JOIN categories cat ON cat.id = c.category_id
-            WHERE c.game_id = %s
-              AND c.round = %s
-            GROUP BY cat.name, c.category_id
-            HAVING COUNT(*) = 5
-               AND ARRAY_AGG(c.clue_value ORDER BY c.clue_value) = %s::INT[]
-        )
-        SELECT name, clue_ids
-        FROM category_groups
-        ORDER BY category_id ASC
+        SELECT
+            cat.name,
+            ARRAY_AGG(c.id ORDER BY c.clue_value) AS clue_ids
+        FROM clues c
+        JOIN categories cat ON cat.id = c.category_id
+        WHERE c.game_id = %s
+          AND c.category_id = %s
+          AND c.round = %s
+        GROUP BY cat.name
+        HAVING COUNT(*) = 5
+           AND ARRAY_AGG(c.clue_value ORDER BY c.clue_value) = %s::INT[]
         LIMIT 1
         """,
-        (game_id, round_num, values),
+        (game_id, category_id, round_num, values),
     )
     row = cur.fetchone()
     if not row:
-        raise ValueError(f"No valid category found for round {round_num} in game {game_id}")
+        raise ValueError(
+            f"No valid category found for round {round_num}, game {game_id}, and category {category_id}"
+        )
     return row[0], list(row[1])
 
 
-def _select_final_for_game(cur, *, game_id: int) -> tuple[str, int]:
+def _select_final_by_clue_id(cur, *, final_clue_id: int) -> tuple[str, int]:
     cur.execute(
         """
         SELECT
@@ -255,22 +256,19 @@ def _select_final_for_game(cur, *, game_id: int) -> tuple[str, int]:
             c.id
         FROM clues c
         JOIN categories cat ON cat.id = c.category_id
-        WHERE c.game_id = %s
+        WHERE c.id = %s
           AND c.round = 3
-        ORDER BY c.id ASC
         LIMIT 1
         """,
-        (game_id,),
+        (final_clue_id,),
     )
     row = cur.fetchone()
     if not row:
-        raise ValueError(f"No final clue found in game {game_id}")
+        raise ValueError(f"No final clue found for clue_id {final_clue_id}")
     return row[0], row[1]
 
 
 def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
-    day_offset = max(0, (challenge_date - START_DATE).days)
-
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -301,20 +299,31 @@ def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
                     final_clue_id=row[6],
                 )
 
-            game_id = _select_daily_game(cur, offset=day_offset)
-            single_name, single_ids = _select_category_for_game(
+            (
+                single_game_id,
+                single_category_id,
+                double_game_id,
+                double_category_id,
+                final_clue_id,
+            ) = _pick_daily_candidates(
                 cur,
-                game_id=game_id,
+                challenge_date=challenge_date,
+            )
+            single_name, single_ids = _select_category_by_id(
+                cur,
+                game_id=single_game_id,
+                category_id=single_category_id,
                 round_num=1,
                 values=SINGLE_VALUES,
             )
-            double_name, double_ids = _select_category_for_game(
+            double_name, double_ids = _select_category_by_id(
                 cur,
-                game_id=game_id,
+                game_id=double_game_id,
+                category_id=double_category_id,
                 round_num=2,
                 values=DOUBLE_VALUES,
             )
-            final_name, final_id = _select_final_for_game(cur, game_id=game_id)
+            final_name, final_id = _select_final_by_clue_id(cur, final_clue_id=final_clue_id)
 
             cur.execute(
                 """
