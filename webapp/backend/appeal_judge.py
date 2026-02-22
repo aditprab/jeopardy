@@ -19,8 +19,8 @@ except ImportError:
     from answer import extract_alternates, normalize
 
 AGENT_NAME = "appeal_judge"
-AGENT_VERSION = "v3"
-POLICY_VERSION = "appeal_policy_v3"
+AGENT_VERSION = "v4"
+POLICY_VERSION = "appeal_policy_v4"
 PROMPT_VERSION = "appeal_prompt_v2"
 
 DEFAULT_MODEL = "gpt-4.1-mini"
@@ -61,7 +61,14 @@ ALLOWED_REASON_CODES = {
     "semantic_equivalence",
 }
 ALLOWED_MATCH_TYPES = {"exact", "alias", "last_name", "minor_typo", "no_match"}
-OVERTURN_MATCH_TYPES = {"exact", "alias", "last_name", "minor_typo"}
+ACCEPT_REASON_CODES = {
+    "exact_match",
+    "last_name_match",
+    "minor_typo_match",
+    "strong_fuzzy_match",
+    "semantic_equivalence",
+}
+REJECT_REASON_CODES = {"empty_response", "insufficient_specificity", "no_match"}
 
 _client: OpenAI | None = None
 logger = logging.getLogger(__name__)
@@ -396,22 +403,20 @@ def _llm_decision(
             "Appeal judge guardrail applied: low_same_entity_no_overturn (same_entity_likelihood=%.3f)",
             same_entity_likelihood,
         )
-    if overturn and match_type not in OVERTURN_MATCH_TYPES:
-        guardrails.append("invalid_match_type_no_overturn")
-        overturn = False
-        final_correct = False
-        reason_code = "no_match"
-        logger.warning(
-            "Appeal judge guardrail applied: invalid_match_type_no_overturn (match_type=%s)",
-            match_type,
-        )
+    # Normalize for storage consistency: in appeal outcomes, overturn implies correct.
+    final_correct = overturn
     if overturn:
-        reason_code = {
-            "exact": "exact_match",
-            "alias": "semantic_equivalence",
-            "last_name": "last_name_match",
-            "minor_typo": "minor_typo_match",
-        }.get(match_type, reason_code)
+        if reason_code not in ACCEPT_REASON_CODES:
+            reason_code = {
+                "exact": "exact_match",
+                "alias": "semantic_equivalence",
+                "last_name": "last_name_match",
+                "minor_typo": "minor_typo_match",
+            }.get(match_type, "semantic_equivalence")
+            guardrails.append("normalized_accept_reason_code")
+    elif reason_code not in REJECT_REASON_CODES:
+        reason_code = "no_match"
+        guardrails.append("normalized_reject_reason_code")
 
     return AppealDecision(
         overturn=overturn,
