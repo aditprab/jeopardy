@@ -8,7 +8,6 @@ This repo contains that app, base data ingestion scripts, and eventually data an
 - `webapp/`: consumer-facing application (frontend + backend APIs).
 - `dataset/`: Postgres schema, setup, and ingestion scripts from source Jeopardy data.
 - `docs/`: architecture and operations docs.
-- `projects/`: future standalone data science or experimentation projects.
 
 ## Quick Start
 
