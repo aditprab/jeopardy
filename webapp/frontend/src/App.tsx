@@ -2,6 +2,7 @@ import { useState } from 'react';
 import DailyChallengeGame from './components/DailyChallengeGame';
 
 type Mode = 'landing' | 'daily';
+const maintenanceMode = (import.meta.env.VITE_MAINTENANCE_MODE || '').toLowerCase() === 'true';
 
 function FooterCredit() {
   return (
@@ -34,7 +35,32 @@ function Landing({ onSelect }: { onSelect: () => void }) {
   );
 }
 
+function MaintenanceScreen() {
+  return (
+    <div className="landing-screen">
+      <h1 className="title">JEOPARDY!</h1>
+      <div className="mode-grid">
+        <div className="mode-card">
+          <span className="mode-title">Scheduled Maintenance</span>
+          <span className="mode-description">
+            The game is temporarily unavailable while we roll out backend updates. Please check back soon.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  if (maintenanceMode) {
+    return (
+      <>
+        <MaintenanceScreen />
+        <FooterCredit />
+      </>
+    );
+  }
+
   const [mode, setMode] = useState<Mode>('landing');
 
   return (
