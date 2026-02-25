@@ -166,11 +166,6 @@ body {
   text-transform: uppercase;
 }
 
-.round-buttons {
-  display: flex;
-  gap: 24px;
-}
-
 .round-btn {
   padding: 18px 40px;
   font-family: inherit;
@@ -224,20 +219,6 @@ body {
   50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* ============================================
-   Game Screen
-   ============================================ */
-.game-screen {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 16px 20px;
-  background:
-    radial-gradient(ellipse 100% 80% at 50% 0%, rgba(18, 36, 86, 0.6) 0%, transparent 60%),
-    var(--navy-deep);
-}
-
 .daily-screen {
   min-height: 100vh;
   min-height: 100dvh;
@@ -279,40 +260,6 @@ body {
   font-size: 0.9rem;
 }
 
-.daily-progress {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.daily-progress-shell {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-}
-
-.daily-progress-track {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-}
-
-.daily-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #f3ba2f 0%, #ffd86f 100%);
-  box-shadow: 0 0 12px rgba(243, 186, 47, 0.4);
-  transition: width 0.35s ease;
-}
-
 .daily-dots-shell {
   padding: 11px 14px;
   border-radius: 16px;
@@ -320,13 +267,6 @@ body {
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-soft), inset 0 1px 0 var(--glass-highlight);
   backdrop-filter: blur(16px);
-}
-
-.daily-dots-track {
-  display: grid;
-  grid-template-columns: repeat(11, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
 }
 
 .daily-dot {
@@ -559,142 +499,6 @@ body {
   text-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
 }
 
-/* ============================================
-   Board
-   ============================================ */
-.board {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
-}
-
-.board-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  min-width: 720px;
-}
-
-.board-row.headers {
-  min-height: 80px;
-}
-
-/* Category Header */
-.category-header {
-  background: linear-gradient(180deg, var(--navy-light) 0%, var(--navy) 100%);
-  color: #c8d0e8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 12px 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-sm);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  line-height: 1.3;
-}
-
-/* ============================================
-   Clue Cells
-   ============================================ */
-.clue-cell {
-  background: linear-gradient(160deg, var(--blue) 0%, var(--navy-light) 100%);
-  color: var(--gold);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-sm);
-  font-size: 1.4rem;
-  font-weight: 800;
-  cursor: pointer;
-  padding: 20px 8px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
-  min-height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.clue-cell:hover:not(.answered) {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 20px rgba(245, 197, 24, 0.1);
-  background: linear-gradient(160deg, var(--blue-bright) 0%, var(--blue) 100%);
-}
-
-.clue-cell:active:not(.answered) {
-  transform: translateY(0) scale(1);
-}
-
-.clue-cell.answered {
-  background: var(--navy);
-  color: transparent;
-  cursor: default;
-  opacity: 0.2;
-  border-color: transparent;
-  transition: opacity 0.5s ease, background 0.5s ease;
-}
-
-/* ============================================
-   Modal
-   ============================================ */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(3, 6, 20, 0.8);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  animation: overlay-fade 0.25s ease-out;
-}
-
-@keyframes overlay-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.modal {
-  background: linear-gradient(170deg, rgba(18, 36, 86, 0.85) 0%, rgba(11, 26, 62, 0.92) 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 44px 40px;
-  max-width: 620px;
-  width: 90%;
-  text-align: center;
-  backdrop-filter: blur(24px);
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.5),
-    0 0 60px rgba(245, 197, 24, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  animation: modal-slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes modal-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal-loading {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--gold);
-}
-
 /* Clue display */
 .clue-category {
   font-size: 0.72rem;
@@ -745,13 +549,6 @@ body {
 
 .response-input::placeholder {
   color: rgba(255, 255, 255, 0.3);
-}
-
-/* Buttons */
-.clue-buttons {
-  display: flex;
-  gap: 14px;
-  justify-content: center;
 }
 
 .submit-btn {
@@ -885,87 +682,6 @@ body {
   text-shadow: 0 0 10px rgba(255, 207, 112, 0.22);
 }
 
-.appeal-block {
-  margin: 12px 0 18px;
-}
-
-.appeal-input {
-  width: 100%;
-  min-height: 80px;
-  resize: vertical;
-  padding: 12px 14px;
-  font-family: inherit;
-  font-size: 0.95rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.22);
-  color: white;
-  outline: none;
-  margin-bottom: 10px;
-}
-
-.appeal-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
-}
-
-.appeal-btn {
-  width: 100%;
-  padding: 11px 14px;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
-  color: #eef1f8;
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.appeal-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.appeal-btn:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.appeal-error {
-  color: #fca5a5;
-  margin-top: 8px;
-  font-size: 0.9rem;
-}
-
-.appeal-result {
-  margin-top: 10px;
-  font-size: 0.92rem;
-  line-height: 1.4;
-}
-
-.appeal-result.overturned {
-  color: #86efac;
-}
-
-.appeal-result.denied {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-/* ============================================
-   Game Over
-   ============================================ */
-.game-over {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 28px;
-}
-
 .game-over-text {
   font-size: 1.8rem;
   font-weight: 800;
@@ -1001,30 +717,12 @@ body {
     width: min(560px, 92vw);
   }
 
-  .round-buttons {
-    width: min(560px, 92vw);
-    flex-direction: column;
-  }
-
   .round-btn {
     width: 100%;
   }
 
-  .game-screen {
-    padding: 12px;
-  }
-
   .daily-screen {
     padding: 12px 12px 24px;
-  }
-
-  .daily-progress {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .daily-dots-track {
-    gap: 5px;
   }
 
   .daily-dot {
@@ -1059,27 +757,6 @@ body {
     margin-left: auto;
   }
 
-  .board-row {
-    min-width: 660px;
-  }
-
-  .category-header {
-    font-size: 0.72rem;
-    padding: 10px 6px;
-    min-height: 64px;
-  }
-
-  .clue-cell {
-    font-size: 1.2rem;
-    min-height: 62px;
-    padding: 14px 6px;
-  }
-
-  .modal {
-    width: 94%;
-    padding: 28px 20px;
-  }
-
   .clue-text {
     font-size: 1.18rem;
     margin-bottom: 24px;
@@ -1110,10 +787,6 @@ body {
     font-size: 1.05rem;
   }
 
-  .game-screen {
-    padding: 10px;
-  }
-
   .top-bar {
     align-items: stretch;
   }
@@ -1132,39 +805,6 @@ body {
 
   .score-value {
     font-size: 1.4rem;
-  }
-
-  .board {
-    gap: 5px;
-  }
-
-  .board-row {
-    gap: 5px;
-    min-width: 590px;
-  }
-
-  .board-row.headers {
-    min-height: 62px;
-  }
-
-  .category-header {
-    font-size: 0.64rem;
-    letter-spacing: 0.35px;
-    line-height: 1.18;
-    min-height: 56px;
-    padding: 8px 5px;
-  }
-
-  .clue-cell {
-    font-size: 1rem;
-    min-height: 52px;
-    padding: 10px 4px;
-  }
-
-  .modal {
-    width: 96%;
-    padding: 22px 14px;
-    border-radius: 14px;
   }
 
   .dd-banner {
@@ -1187,11 +827,6 @@ body {
   .clue-air-date {
     font-size: 0.72rem;
     margin-bottom: 10px;
-  }
-
-  .clue-buttons {
-    flex-direction: column;
-    gap: 10px;
   }
 
   .submit-btn,

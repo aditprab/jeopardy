@@ -1,38 +1,3 @@
-export interface Clue {
-  id: number;
-  value: number;
-  is_daily_double: boolean;
-}
-
-export interface Category {
-  name: string;
-  clues: Clue[];
-}
-
-export interface BoardData {
-  round: number;
-  categories: Category[];
-}
-
-export interface ClueDetail {
-  id: number;
-  category: string;
-  value: number;
-  clue_text: string;
-  expected_response: string;
-  air_date: string;
-}
-
-export interface AnswerResult {
-  correct: boolean;
-  expected: string;
-  attempt_id?: number;
-  trace_id: string;
-  llm_invoked: boolean;
-  reason_code: string | null;
-  reason: string | null;
-}
-
 export interface DailyClue {
   id: number;
   value: number;

@@ -299,6 +299,28 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     }
   };
 
+  const handleClueInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || submitting || !clue || answerResult) return;
+    if (response.trim()) {
+      void handleSubmitClue();
+      return;
+    }
+    void handleSkipClue();
+  };
+
+  const handleFinalInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || submitting || !challenge || finalResult) return;
+    if (challenge.progress.final.wager === null) return;
+    if (!response.trim()) return;
+    void handleSubmitFinal();
+  };
+
+  const handleWagerInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || submitting || !challenge || finalResult) return;
+    if (challenge.progress.final.wager !== null) return;
+    void handleLockFinalWager();
+  };
+
   if (loading) {
     return (
       <div className="start-screen">
@@ -406,6 +428,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   placeholder="What is..."
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
+                  onKeyDown={handleClueInputKeyDown}
                   disabled={submitting}
                 />
                 <div className="daily-answer-actions">
@@ -436,6 +459,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   max={maxWager}
                   value={wagerInput}
                   onChange={(e) => setWagerInput(e.target.value)}
+                  onKeyDown={handleWagerInputKeyDown}
                   disabled={submitting || Boolean(finalResult)}
                 />
                 <button className="submit-btn" onClick={handleLockFinalWager} disabled={submitting}>
@@ -476,6 +500,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   placeholder="Who is / What is..."
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
+                  onKeyDown={handleFinalInputKeyDown}
                   disabled={submitting}
                 />
                 <button className="submit-btn" onClick={handleSubmitFinal} disabled={submitting || !response.trim()}>
