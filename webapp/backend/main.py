@@ -2,13 +2,12 @@ from contextlib import asynccontextmanager
 import os
 from uuid import uuid4
 
-from fastapi import FastAPI, Header, HTTPException, Query, Response
+from fastapi import FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 try:
-    from .db import init_pool, close_pool, get_conn, put_conn
-    from .board import generate_board, get_clue
+    from .db import init_pool, close_pool
     from .daily import (
         ensure_daily_schema,
         get_daily_challenge_payload,
@@ -19,11 +18,10 @@ try:
         submit_daily_final_wager,
         today_et,
     )
-    from .grading import ensure_grading_schema, grade_and_record
+    from .grading import ensure_grading_schema
 except ImportError:
     # Supports running from webapp/backend as module path "main:app".
-    from db import init_pool, close_pool, get_conn, put_conn
-    from board import generate_board, get_clue
+    from db import init_pool, close_pool
     from daily import (
         ensure_daily_schema,
         get_daily_challenge_payload,
@@ -34,7 +32,7 @@ except ImportError:
         submit_daily_final_wager,
         today_et,
     )
-    from grading import ensure_grading_schema, grade_and_record
+    from grading import ensure_grading_schema
 
 
 @asynccontextmanager
@@ -64,73 +62,6 @@ app.add_middleware(
 )
 
 
-@app.get("/api/board")
-def board(round: int = Query(..., ge=1, le=2)):
-    try:
-        return generate_board(round)
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/clue/{clue_id}")
-def clue(clue_id: int):
-    result = get_clue(clue_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Clue not found")
-    return result
-
-
-class AnswerRequest(BaseModel):
-    clue_id: int
-    response: str
-
-
-@app.post("/api/answer")
-def answer(req: AnswerRequest):
-    clue_data = get_clue(req.clue_id)
-    if not clue_data:
-        raise HTTPException(status_code=404, detail="Clue not found")
-
-    conn = get_conn()
-    try:
-        with conn.cursor() as cur:
-            result = grade_and_record(
-                cur,
-                clue_id=req.clue_id,
-                clue_text=clue_data["clue_text"],
-                expected_response=clue_data["expected_response"],
-                user_response=req.response,
-            )
-        conn.commit()
-        return {
-            "correct": result["correct"],
-            "expected": result["expected"],
-            "attempt_id": result["event_id"],
-            "trace_id": result["trace_id"],
-            "llm_invoked": result["llm_invoked"],
-            "reason_code": result["reason_code"],
-            "reason": result["reason"],
-        }
-    except Exception:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail="Failed to grade answer")
-    finally:
-        put_conn(conn)
-
-
-class AppealRequest(BaseModel):
-    attempt_id: int
-    user_justification: str | None = None
-
-
-@app.post("/api/appeal")
-def appeal(req: AppealRequest):
-    raise HTTPException(
-        status_code=410,
-        detail="Manual appeals are deprecated. Answers are now auto-judged on initial submission.",
-    )
-
-
 class DailyAnswerRequest(BaseModel):
     stage: str
     index: int
@@ -144,12 +75,6 @@ class DailyFinalRequest(BaseModel):
 
 class DailyFinalWagerRequest(BaseModel):
     wager: int
-
-
-class DailyAppealApplyRequest(BaseModel):
-    stage: str
-    index: int | None = None
-    attempt_id: int
 
 
 @app.get("/api/daily-challenge")
@@ -232,18 +157,6 @@ def daily_final(
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/api/daily-challenge/apply-appeal")
-def daily_apply_appeal(
-    req: DailyAppealApplyRequest,
-    response: Response,
-    player_token: str | None = Header(default=None, alias="X-Player-Token"),
-):
-    raise HTTPException(
-        status_code=410,
-        detail="Manual appeal application is deprecated. Daily answers are auto-judged on initial submission.",
-    )
 
 
 @app.post("/api/daily-challenge/reset")
