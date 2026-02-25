@@ -41,8 +41,8 @@ Frontend defaults to Vite local host; set `VITE_API_BASE_URL` if needed.
 
 ## Read Next
 
-- Product and local development: [webapp/README.md](/Users/adithya/Desktop/jeopardy/webapp/README.md)
-- Dataset and ingestion details: [dataset/README.md](/Users/adithya/Desktop/jeopardy/dataset/README.md)
-- System behavior and grading flow: [docs/architecture.md](/Users/adithya/Desktop/jeopardy/docs/architecture.md)
-- Runbook and troubleshooting: [docs/operations.md](/Users/adithya/Desktop/jeopardy/docs/operations.md)
-- Future project conventions: [projects/README.md](/Users/adithya/Desktop/jeopardy/projects/README.md)
+- Product and local development: [webapp/README.md](webapp/README.md)
+- Dataset and ingestion details: [dataset/README.md](dataset/README.md)
+- System behavior and grading flow: [docs/architecture.md](docs/architecture.md)
+- Runbook and troubleshooting: [docs/operations.md](docs/operations.md)
+- Future project conventions: [projects/README.md](projects/README.md)
