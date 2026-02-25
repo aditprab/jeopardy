@@ -27,18 +27,10 @@ export interface AnswerResult {
   correct: boolean;
   expected: string;
   attempt_id?: number;
-}
-
-export interface AppealResult {
-  appeal_id: number;
-  final_correct: boolean;
-  overturn: boolean;
-  reason_code: string;
-  reason: string;
-  confidence: number;
-  expected: string;
   trace_id: string;
-  status: 'decided';
+  llm_invoked: boolean;
+  reason_code: string | null;
+  reason: string | null;
 }
 
 export interface DailyClue {
@@ -127,17 +119,4 @@ export interface DailyFinalResult {
 export interface DailyFinalWagerResult {
   idempotent: boolean;
   wager: number | null;
-}
-
-export interface DailyAppealApplyResult {
-  stage: 'single' | 'double' | 'final';
-  index: number | null;
-  attempt_id: number;
-  overturn: boolean;
-  final_correct: boolean;
-  reason_code: string;
-  reason: string;
-  confidence: number;
-  score_after: number;
-  score_delta_adjustment: number;
 }

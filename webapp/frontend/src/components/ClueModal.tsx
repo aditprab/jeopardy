@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ClueDetail, AnswerResult, AppealResult } from '../types';
-import { fetchClue, submitAnswer, submitAppeal } from '../api';
+import type { ClueDetail, AnswerResult } from '../types';
+import { fetchClue, submitAnswer } from '../api';
 
 interface Props {
   clueId: number;
@@ -29,10 +29,6 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
   const [response, setResponse] = useState('');
   const [result, setResult] = useState<AnswerResult | null>(null);
   const [skipped, setSkipped] = useState(false);
-  const [appealText, setAppealText] = useState('');
-  const [appealLoading, setAppealLoading] = useState(false);
-  const [appealError, setAppealError] = useState('');
-  const [appealResult, setAppealResult] = useState<AppealResult | null>(null);
   const [wager, setWager] = useState(value);
   const [wagerInput, setWagerInput] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,10 +40,6 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
       setClue(data);
       setPhase(isDailyDouble ? 'wager' : 'clue');
     });
-    setAppealText('');
-    setAppealLoading(false);
-    setAppealError('');
-    setAppealResult(null);
   }, [clueId, isDailyDouble]);
 
   useEffect(() => {
@@ -69,34 +61,20 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
     if (!response.trim()) return;
     const res = await submitAnswer(clueId, response);
     setResult(res);
-    setAppealText('');
-    setAppealError('');
-    setAppealResult(null);
     setPhase('result');
   };
 
   const handleSkip = () => {
     setSkipped(true);
-    setResult({ correct: false, expected: clue?.expected_response ?? '' });
-    setAppealText('');
-    setAppealError('');
-    setAppealResult(null);
+    setResult({
+      correct: false,
+      expected: clue?.expected_response ?? '',
+      trace_id: '',
+      llm_invoked: false,
+      reason_code: null,
+      reason: null,
+    });
     setPhase('result');
-  };
-
-  const handleAppeal = async () => {
-    if (!result?.attempt_id || appealLoading) return;
-    setAppealLoading(true);
-    setAppealError('');
-    try {
-      const appeal = await submitAppeal(result.attempt_id, appealText.trim() || undefined);
-      setAppealResult(appeal);
-      setResult((prev) => (prev ? { ...prev, correct: appeal.final_correct } : prev));
-    } catch {
-      setAppealError('Appeal failed. Please try again.');
-    } finally {
-      setAppealLoading(false);
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -162,30 +140,6 @@ export default function ClueModal({ clueId, value, isDailyDouble, currentScore, 
             {!skipped && (
               <div className="result-value">
                 {result.correct ? '+' : '-'}${effectiveValue.toLocaleString()}
-              </div>
-            )}
-            {!result.correct && !skipped && result.attempt_id && (
-              <div className="appeal-block">
-                {!appealResult && (
-                  <>
-                    <textarea
-                      value={appealText}
-                      onChange={(e) => setAppealText(e.target.value)}
-                      placeholder="Optional: Why should this response count?"
-                      className="appeal-input"
-                      maxLength={280}
-                    />
-                    <button onClick={handleAppeal} className="appeal-btn" disabled={appealLoading}>
-                      {appealLoading ? 'Reviewing...' : 'Appeal to Judge Agent'}
-                    </button>
-                  </>
-                )}
-                {appealError && <div className="appeal-error">{appealError}</div>}
-                {appealResult && (
-                  <div className={`appeal-result ${appealResult.overturn ? 'overturned' : 'denied'}`}>
-                    {appealResult.overturn ? 'Appeal Accepted' : 'Appeal Denied'}: {appealResult.reason}
-                  </div>
-                )}
               </div>
             )}
             <button onClick={() => onClose({ correct: result.correct, value: skipped ? 0 : effectiveValue })} className="submit-btn">

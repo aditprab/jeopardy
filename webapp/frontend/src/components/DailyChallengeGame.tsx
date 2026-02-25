@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  applyDailyAppeal,
   fetchDailyChallenge,
-  submitAppeal,
   submitDailyAnswer,
   submitDailyFinal,
   submitDailyFinalWager,
@@ -12,7 +10,6 @@ import type {
   DailyProgressAnswer,
   DailyAnswerResult,
   DailyFinalResult,
-  AppealResult,
 } from '../types';
 import Scoreboard from './Scoreboard';
 
@@ -76,10 +73,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const [answerResult, setAnswerResult] = useState<DailyAnswerResult | null>(null);
   const [finalResult, setFinalResult] = useState<DailyFinalResult | null>(null);
   const [wagerInput, setWagerInput] = useState('0');
-  const [appealText, setAppealText] = useState('');
-  const [appealLoading, setAppealLoading] = useState(false);
-  const [appealError, setAppealError] = useState('');
-  const [appealResult, setAppealResult] = useState<AppealResult | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
 
@@ -165,13 +158,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     };
   }, [challenge, step, answerResult]);
 
-  const clearAppealState = () => {
-    setAppealText('');
-    setAppealLoading(false);
-    setAppealError('');
-    setAppealResult(null);
-  };
-
   const applyAnswerToState = (result: DailyAnswerResult, submittedResponse: string) => {
     if (!challenge) return;
     const updated = structuredClone(challenge);
@@ -201,7 +187,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     try {
       const result = await submitDailyAnswer(step.stage as 'single' | 'double', step.index, response, false);
       setAnswerResult(result);
-      clearAppealState();
       applyAnswerToState(result, response);
     } catch {
       setError('Failed to submit answer.');
@@ -217,7 +202,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     try {
       const result = await submitDailyAnswer(step.stage as 'single' | 'double', step.index, '', true);
       setAnswerResult(result);
-      clearAppealState();
       applyAnswerToState(result, '');
     } catch {
       setError('Failed to skip clue.');
@@ -263,7 +247,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     try {
       const result = await submitDailyFinal(response);
       setFinalResult(result);
-      clearAppealState();
       const updated = structuredClone(challenge);
       updated.progress.final = {
         submitted: true,
@@ -281,79 +264,6 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       setError('Failed to submit final clue.');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleAppeal = async () => {
-    if (!challenge || appealLoading) return;
-
-    let stage: 'single' | 'double' | 'final';
-    let index: number | undefined;
-    let attemptId: number | null = null;
-
-    if (answerResult) {
-      stage = answerResult.stage;
-      index = answerResult.index;
-      attemptId = answerResult.attempt_id;
-    } else if (finalResult) {
-      stage = 'final';
-      attemptId = finalResult.attempt_id;
-    } else {
-      return;
-    }
-
-    if (!attemptId) return;
-
-    setAppealLoading(true);
-    setAppealError('');
-    try {
-      const appealed = await submitAppeal(attemptId, appealText.trim() || undefined);
-      setAppealResult(appealed);
-      const applied = await applyDailyAppeal(stage, attemptId, index);
-      const updated = structuredClone(challenge);
-      updated.progress.current_score = applied.score_after;
-
-      if (stage === 'final') {
-        if (updated.progress.final.submitted) {
-          updated.progress.final.correct = applied.final_correct;
-          if (updated.progress.final.wager !== null) {
-            updated.progress.final.score_delta = applied.final_correct
-              ? updated.progress.final.wager
-              : -updated.progress.final.wager;
-          }
-        }
-        if (finalResult) {
-          setFinalResult({
-            ...finalResult,
-            correct: applied.final_correct,
-            score_delta: updated.progress.final.score_delta ?? finalResult.score_delta,
-            final_score: applied.score_after,
-          });
-        }
-      } else if (index !== undefined) {
-        const target = stage === 'single'
-          ? updated.progress.answers.single
-          : updated.progress.answers.double;
-        const existing = target[index];
-        if (existing) {
-          existing.correct = applied.final_correct;
-          existing.score_delta = applied.final_correct ? existing.value : -existing.value;
-        }
-        if (answerResult) {
-          setAnswerResult({
-            ...answerResult,
-            correct: applied.final_correct,
-            score_delta: existing ? existing.score_delta : answerResult.score_delta,
-            score_after: applied.score_after,
-          });
-        }
-      }
-
-      setChallenge(updated);
-    } catch {
-      setAppealError('Appeal failed. Please try again.');
-    } finally {
-      setAppealLoading(false);
     }
   };
 
@@ -479,32 +389,11 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 <div className="result-value">
                   {answerResult.score_delta > 0 ? '+' : ''}${answerResult.score_delta.toLocaleString()}
                 </div>
-                {!answerResult.correct && !answerResult.skipped && !appealResult && answerResult.attempt_id && (
-                  <div className="appeal-block">
-                    <textarea
-                      value={appealText}
-                      onChange={(e) => setAppealText(e.target.value)}
-                      placeholder="Optional: Why should this response count?"
-                      className="appeal-input"
-                      maxLength={280}
-                    />
-                    <button onClick={handleAppeal} className="appeal-btn" disabled={appealLoading}>
-                      {appealLoading ? 'Reviewing...' : 'Appeal to Judge Agent'}
-                    </button>
-                  </div>
-                )}
-                {appealError && <div className="appeal-error">{appealError}</div>}
-                {appealResult && (
-                  <div className={`appeal-result ${appealResult.overturn ? 'overturned' : 'denied'}`}>
-                    {appealResult.overturn ? 'Appeal Accepted' : 'Appeal Denied'}: {appealResult.reason}
-                  </div>
-                )}
                 <button
                   className="submit-btn"
                   onClick={() => {
                     setAnswerResult(null);
                     setResponse('');
-                    clearAppealState();
                   }}
                 >
                   Next Clue
@@ -570,32 +459,11 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 <div className="result-value">
                   {finalResult.score_delta >= 0 ? '+' : ''}${finalResult.score_delta.toLocaleString()}
                 </div>
-                {!finalResult.correct && !appealResult && finalResult.attempt_id && (
-                  <div className="appeal-block">
-                    <textarea
-                      value={appealText}
-                      onChange={(e) => setAppealText(e.target.value)}
-                      placeholder="Optional: Why should this response count?"
-                      className="appeal-input"
-                      maxLength={280}
-                    />
-                    <button onClick={handleAppeal} className="appeal-btn" disabled={appealLoading}>
-                      {appealLoading ? 'Reviewing...' : 'Appeal to Judge Agent'}
-                    </button>
-                  </div>
-                )}
-                {appealError && <div className="appeal-error">{appealError}</div>}
-                {appealResult && (
-                  <div className={`appeal-result ${appealResult.overturn ? 'overturned' : 'denied'}`}>
-                    {appealResult.overturn ? 'Appeal Accepted' : 'Appeal Denied'}: {appealResult.reason}
-                  </div>
-                )}
                 <button
                   className="submit-btn"
                   onClick={() => {
                     setFinalResult(null);
                     setResponse('');
-                    clearAppealState();
                   }}
                 >
                   View Final Score

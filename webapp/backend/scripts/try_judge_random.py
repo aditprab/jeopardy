@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 from pathlib import Path
@@ -21,11 +20,9 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 try:
-    from ..answer import check_answer
-    from ..appeal_judge import judge_appeal
+    from ..grading import grade_and_record
 except ImportError:
-    from answer import check_answer
-    from appeal_judge import judge_appeal
+    from grading import grade_and_record
 
 
 def _with_sslmode_if_needed(db_url: str) -> str:
@@ -113,7 +110,34 @@ def _ask_yes_no(prompt: str, default_no: bool = True) -> bool:
     return raw in {"y", "yes"}
 
 
-def run_session(conn, round_filter: int | None):
+def _fetch_event_snapshot(conn, event_id: int):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                deterministic_stage,
+                deterministic_decision,
+                similarity_score,
+                token_overlap_score,
+                llm_invoked,
+                llm_reason_code,
+                llm_reason_text,
+                decision_source,
+                final_decision,
+                latency_ms_total,
+                latency_ms_deterministic,
+                latency_ms_llm
+            FROM answer_grading_events
+            WHERE id = %s
+            """,
+            (event_id,),
+        )
+        return cur.fetchone()
+
+
+def run_session(conn, round_filter: int | None, readonly: bool):
+    if readonly:
+        print("Mode: READONLY (every graded attempt will be rolled back)")
     while True:
         clue = _fetch_random_clue(conn, round_filter)
         print("\n--- Random Clue ---")
@@ -127,38 +151,45 @@ def run_session(conn, round_filter: int | None):
         if user_response.lower() in {"/quit", "quit", "q", "exit"}:
             break
 
-        correct, expected = check_answer(user_response, clue["expected_response"])
-        print("\n--- Initial Grader ---")
-        print(f"Correct: {correct}")
-        print(f"Expected: {expected}")
+        try:
+            with conn.cursor() as cur:
+                result = grade_and_record(
+                    cur,
+                    clue_id=clue["id"],
+                    clue_text=clue["clue_text"],
+                    expected_response=clue["expected_response"],
+                    user_response=user_response,
+                )
+            event_row = _fetch_event_snapshot(conn, int(result["event_id"]))
+            if readonly:
+                conn.rollback()
+            else:
+                conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        print("\n--- Initial Grading Event ---")
+        print(f"Event ID: {result['event_id']}")
+        print(f"Trace ID: {result['trace_id']}")
+        print(f"Correct: {result['correct']}")
+        print(f"Expected: {result['expected']}")
+        print(f"LLM Invoked: {result['llm_invoked']}")
+        if readonly:
+            print("Persisted: no (rolled back)")
 
-        if not _ask_yes_no("\nRun appeal judge for this response? [y/N]: "):
-            if _ask_yes_no("Try another random clue? [Y/n]: ", default_no=False):
-                continue
-            break
-
-        justification = input("Optional appeal note (press Enter to skip): ").strip()
-        decision = judge_appeal(
-            clue_text=clue["clue_text"],
-            expected_response=expected,
-            user_response=user_response,
-            fuzzy_correct=correct,
-            user_justification=justification or None,
-        )
-
-        print("\n--- Appeal Judge Decision ---")
-        print(f"Overturn: {decision.overturn}")
-        print(f"Final Correct: {decision.final_correct}")
-        print(f"Reason Code: {decision.reason_code}")
-        print(f"Confidence: {decision.confidence:.3f}")
-        print(f"Reason: {decision.reason}")
-        if decision.guardrail_flags:
-            print(f"Guardrails: {', '.join(decision.guardrail_flags)}")
-        else:
-            print("Guardrails: (none)")
-
-        if _ask_yes_no("\nShow raw model output payload? [y/N]: "):
-            print(json.dumps(decision.raw_output, indent=2, sort_keys=True))
+        if event_row:
+            print(f"Deterministic Stage: {event_row[0]}")
+            print(f"Deterministic Decision: {event_row[1]}")
+            print(f"Similarity: {0.0 if event_row[2] is None else float(event_row[2]):.3f}")
+            print(f"Token Overlap: {0.0 if event_row[3] is None else float(event_row[3]):.3f}")
+            print(f"LLM Reason Code: {event_row[5]}")
+            print(f"LLM Reason: {event_row[6]}")
+            print(f"Decision Source: {event_row[7]}")
+            print(f"Final Decision: {event_row[8]}")
+            print(
+                "Latency ms (total/deterministic/llm): "
+                f"{event_row[9]}/{event_row[10]}/{event_row[11] if event_row[11] is not None else 0}"
+            )
 
         if _ask_yes_no("\nTry another random clue? [Y/n]: ", default_no=False):
             continue
@@ -167,7 +198,7 @@ def run_session(conn, round_filter: int | None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Try the answer grader + appeal judge on random clues from your database."
+        description="Try the initial grading flow (deterministic + auto-LLM) on random clues."
     )
     parser.add_argument(
         "--database-url",
@@ -180,13 +211,18 @@ def main():
         default=None,
         help="Optional round filter (1, 2, or 3).",
     )
+    parser.add_argument(
+        "--readonly",
+        action="store_true",
+        help="Run full grading flow but roll back each attempt (no DB writes persisted).",
+    )
     args = parser.parse_args()
 
     _load_env_file(BACKEND_DIR / ".env")
 
     conn = _connect(args.database_url)
     try:
-        run_session(conn, args.round)
+        run_session(conn, args.round, args.readonly)
     finally:
         conn.close()
 

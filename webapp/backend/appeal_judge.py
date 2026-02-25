@@ -88,6 +88,12 @@ class AppealDecision:
     raw_output: dict[str, Any]
 
 
+@dataclass
+class LLMJudgeFailure:
+    error_type: str
+    error_message: str
+
+
 def _looks_like_person_clue(clue_text: str) -> bool:
     text = f" {clue_text.lower()} "
     return any(indicator in text for indicator in PERSON_INDICATORS)
@@ -500,3 +506,30 @@ def judge_appeal(
             "llm_error_message": str(exc),
         }
         return fallback
+
+
+def judge_appeal_llm_only(
+    *,
+    clue_text: str,
+    expected_response: str,
+    user_response: str,
+    user_justification: str | None,
+) -> tuple[AppealDecision | None, LLMJudgeFailure | None]:
+    trimmed_justification = (user_justification or "").strip()
+    if len(trimmed_justification) > MIN_JUSTIFICATION_LEN:
+        trimmed_justification = trimmed_justification[:MIN_JUSTIFICATION_LEN]
+
+    try:
+        decision = _llm_decision(
+            clue_text=clue_text,
+            expected_response=expected_response,
+            user_response=user_response,
+            user_justification=trimmed_justification,
+        )
+        return decision, None
+    except Exception as exc:
+        logger.warning("Appeal judge LLM-only path failed: %s", type(exc).__name__)
+        return None, LLMJudgeFailure(
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )

@@ -122,6 +122,46 @@ CREATE INDEX idx_answer_attempts_clue_id ON answer_attempts(clue_id);
 CREATE INDEX idx_answer_attempts_created_at ON answer_attempts(created_at);
 CREATE INDEX idx_answer_appeals_status ON answer_appeals(status);
 
+-- New grading source-of-truth table (manual appeal flow is deprecated)
+CREATE TABLE answer_grading_events (
+    id BIGSERIAL PRIMARY KEY,
+    trace_id TEXT NOT NULL,
+    challenge_date DATE,
+    player_token TEXT,
+    clue_id INT NOT NULL REFERENCES clues(id),
+    user_response_raw TEXT NOT NULL,
+    expected_response_snapshot TEXT NOT NULL,
+    user_response_normalized TEXT NOT NULL,
+    expected_response_normalized TEXT NOT NULL,
+    deterministic_stage TEXT NOT NULL CHECK (
+        deterministic_stage IN ('exact', 'normalized', 'variant', 'none')
+    ),
+    deterministic_decision TEXT NOT NULL CHECK (
+        deterministic_decision IN ('accept', 'reject', 'defer_to_llm')
+    ),
+    similarity_score REAL,
+    token_overlap_score REAL,
+    has_parenthetical_or BOOLEAN NOT NULL DEFAULT FALSE,
+    looks_like_person_name BOOLEAN NOT NULL DEFAULT FALSE,
+    llm_invoked BOOLEAN NOT NULL DEFAULT FALSE,
+    llm_run_id BIGINT REFERENCES agent_runs(id),
+    llm_confidence NUMERIC(4, 3),
+    llm_reason_code TEXT,
+    llm_reason_text TEXT,
+    final_decision TEXT NOT NULL CHECK (final_decision IN ('correct', 'incorrect')),
+    decision_source TEXT NOT NULL CHECK (decision_source IN ('deterministic', 'llm')),
+    overturn_of_event_id BIGINT REFERENCES answer_grading_events(id),
+    latency_ms_total INT NOT NULL,
+    latency_ms_deterministic INT NOT NULL,
+    latency_ms_llm INT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_age_clue_created ON answer_grading_events(clue_id, created_at DESC);
+CREATE INDEX idx_age_player_date ON answer_grading_events(challenge_date, player_token);
+CREATE INDEX idx_age_final_source ON answer_grading_events(final_decision, decision_source);
+CREATE INDEX idx_age_llm_invoked ON answer_grading_events(llm_invoked);
+
 -- Daily challenge mode tables
 CREATE TABLE daily_challenges (
     challenge_date DATE PRIMARY KEY,
@@ -140,7 +180,7 @@ CREATE TABLE daily_player_progress (
     player_token TEXT NOT NULL,
     current_score INT NOT NULL DEFAULT 0,
     answers_json JSONB NOT NULL,
-    final_attempt_id BIGINT REFERENCES answer_attempts(id),
+    final_attempt_id BIGINT,
     final_wager INT,
     final_response TEXT,
     final_correct BOOLEAN,

@@ -2,12 +2,10 @@ import type {
   BoardData,
   ClueDetail,
   AnswerResult,
-  AppealResult,
   DailyChallengeData,
   DailyAnswerResult,
   DailyFinalResult,
   DailyFinalWagerResult,
-  DailyAppealApplyResult,
 } from './types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -53,22 +51,6 @@ export async function submitAnswer(clueId: number, response: string): Promise<An
     body: JSON.stringify({ clue_id: clueId, response }),
   });
   if (!res.ok) throw new Error('Failed to submit answer');
-  return res.json();
-}
-
-export async function submitAppeal(
-  attemptId: number,
-  userJustification?: string,
-): Promise<AppealResult> {
-  const res = await fetch(apiUrl('/api/appeal'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      attempt_id: attemptId,
-      user_justification: userJustification || null,
-    }),
-  });
-  if (!res.ok) throw new Error('Failed to submit appeal');
   return res.json();
 }
 
@@ -129,28 +111,6 @@ export async function submitDailyFinal(
   });
   updatePlayerToken(res);
   if (!res.ok) throw new Error('Failed to submit daily final answer');
-  return res.json();
-}
-
-export async function applyDailyAppeal(
-  stage: 'single' | 'double' | 'final',
-  attemptId: number,
-  index?: number,
-): Promise<DailyAppealApplyResult> {
-  const res = await fetch(apiUrl('/api/daily-challenge/apply-appeal'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders(),
-    },
-    body: JSON.stringify({
-      stage,
-      index: stage === 'final' ? null : index,
-      attempt_id: attemptId,
-    }),
-  });
-  updatePlayerToken(res);
-  if (!res.ok) throw new Error('Failed to apply daily appeal result');
   return res.json();
 }
 

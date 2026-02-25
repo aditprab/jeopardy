@@ -8,11 +8,11 @@ from zoneinfo import ZoneInfo
 from psycopg2.extras import Json
 
 try:
-    from .answer import check_answer
     from .db import get_conn, put_conn
+    from .grading import grade_and_record
 except ImportError:
-    from answer import check_answer
     from db import get_conn, put_conn
+    from grading import grade_and_record
 
 ET_TZ = ZoneInfo("America/New_York")
 MIN_AIR_DATE = date(2005, 1, 1)
@@ -75,7 +75,7 @@ def ensure_daily_schema() -> None:
                     player_token TEXT NOT NULL,
                     current_score INT NOT NULL DEFAULT 0,
                     answers_json JSONB NOT NULL,
-                    final_attempt_id BIGINT REFERENCES answer_attempts(id),
+                    final_attempt_id BIGINT,
                     final_wager INT,
                     final_response TEXT,
                     final_correct BOOLEAN,
@@ -91,7 +91,13 @@ def ensure_daily_schema() -> None:
             cur.execute(
                 """
                 ALTER TABLE daily_player_progress
-                ADD COLUMN IF NOT EXISTS final_attempt_id BIGINT REFERENCES answer_attempts(id)
+                DROP CONSTRAINT IF EXISTS daily_player_progress_final_attempt_id_fkey
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS final_attempt_id BIGINT
                 """
             )
             cur.execute(
@@ -605,22 +611,19 @@ def submit_daily_answer(
             if skipped:
                 score_delta = 0
             else:
-                correct, expected = check_answer(response_text, clue["expected_response"])
-                score_delta = value if correct else -value
-                cur.execute(
-                    """
-                    INSERT INTO answer_attempts (
-                        clue_id,
-                        user_response,
-                        expected_response_snapshot,
-                        fuzzy_correct
-                    )
-                    VALUES (%s, %s, %s, %s)
-                    RETURNING id
-                    """,
-                    (clue_id, response_text, expected, correct),
+                grade = grade_and_record(
+                    cur,
+                    challenge_date=challenge.challenge_date.isoformat(),
+                    player_token=player_token,
+                    clue_id=clue_id,
+                    clue_text=clue["clue_text"],
+                    expected_response=clue["expected_response"],
+                    user_response=response_text,
                 )
-                attempt_id = cur.fetchone()[0]
+                correct = bool(grade["correct"])
+                expected = grade["expected"]
+                score_delta = value if correct else -value
+                attempt_id = int(grade["event_id"])
             new_score = progress["current_score"] + score_delta
 
             stage_answers[index] = {
@@ -761,23 +764,20 @@ def submit_daily_final(
             if not clue:
                 raise ValueError("Final clue not found")
 
-            correct, expected = check_answer(response_text, clue["expected_response"])
+            grade = grade_and_record(
+                cur,
+                challenge_date=challenge.challenge_date.isoformat(),
+                player_token=player_token,
+                clue_id=challenge.final_clue_id,
+                clue_text=clue["clue_text"],
+                expected_response=clue["expected_response"],
+                user_response=response_text,
+            )
+            correct = bool(grade["correct"])
+            expected = grade["expected"]
             score_delta = wager if correct else -wager
             final_score = current_score + score_delta
-            cur.execute(
-                """
-                INSERT INTO answer_attempts (
-                    clue_id,
-                    user_response,
-                    expected_response_snapshot,
-                    fuzzy_correct
-                )
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-                """,
-                (challenge.final_clue_id, response_text, expected, correct),
-            )
-            attempt_id = cur.fetchone()[0]
+            attempt_id = int(grade["event_id"])
 
             cur.execute(
                 """
