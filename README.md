@@ -1,6 +1,7 @@
 # Jeopardy
 
-Monorepo for a Jeopardy-style daily challenge product plus data ingestion tooling.
+Using a Jeopardy question/answer dataset, started off with an LLM-backed "Daily Challenge" web app. 
+This repo contains that app, base data ingestion scripts, and eventually data analysis scripts.
 
 ## Repository Layout
 
