@@ -416,6 +416,14 @@ body {
   border-color: rgba(248, 113, 113, 0.35);
 }
 
+.result-hint {
+  margin-top: 6px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  letter-spacing: 0.2px;
+  color: rgba(228, 236, 255, 0.78);
+}
+
 .daily-error {
   color: #fca5a5;
   text-align: center;

@@ -82,6 +82,36 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const clueCardRef = useRef<HTMLDivElement>(null);
   const finalCardRef = useRef<HTMLDivElement>(null);
 
+  const focusInputWithCard = (
+    inputRef: React.RefObject<HTMLInputElement | null>,
+    cardRef: React.RefObject<HTMLDivElement | null>,
+  ) => {
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      });
+    });
+  };
+
+  const focusForStage = (stage: Stage, hasFinalWager: boolean) => {
+    if (stage === 'single' || stage === 'double') {
+      focusInputWithCard(clueInputRef, clueCardRef);
+      return;
+    }
+    if (stage !== 'final') return;
+    if (!hasFinalWager) {
+      focusInputWithCard(wagerInputRef, finalCardRef);
+      return;
+    }
+    focusInputWithCard(finalInputRef, finalCardRef);
+  };
+
+  const startChallenge = () => {
+    setHasStarted(true);
+    focusForStage('single', false);
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -128,33 +158,23 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   useEffect(() => {
     if (!challenge) return;
 
-    const focusInputWithCard = (
-      inputRef: React.RefObject<HTMLInputElement | null>,
-      cardRef: React.RefObject<HTMLDivElement | null>,
-    ) => {
-      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      window.setTimeout(() => {
-        inputRef.current?.focus({ preventScroll: true });
-      }, 50);
-    };
-
     if (!hasStarted && !hasAnyProgress) {
       startButtonRef.current?.focus();
       return;
     }
 
     if (!answerResult && !finalResult && (step.stage === 'single' || step.stage === 'double')) {
-      focusInputWithCard(clueInputRef, clueCardRef);
+      focusForStage(step.stage, false);
       return;
     }
 
     if (!answerResult && step.stage === 'final' && challenge.progress.final.wager === null) {
-      focusInputWithCard(wagerInputRef, finalCardRef);
+      focusForStage('final', false);
       return;
     }
 
     if (!answerResult && !finalResult && step.stage === 'final' && challenge.progress.final.wager !== null) {
-      focusInputWithCard(finalInputRef, finalCardRef);
+      focusForStage('final', true);
     }
   }, [challenge, hasStarted, hasAnyProgress, step.stage, answerResult, finalResult]);
 
@@ -168,7 +188,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
 
       if (!hasStarted && !hasAnyProgress) {
         e.preventDefault();
-        setHasStarted(true);
+        startChallenge();
         return;
       }
 
@@ -391,9 +411,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   };
 
   const advanceFromClueResult = () => {
-    if (!answerResult) return;
+    if (!answerResult || !challenge) return;
     setAnswerResult(null);
     setResponse('');
+    focusForStage(step.stage, challenge.progress.final.wager !== null);
   };
 
   const advanceFromFinalResult = () => {
@@ -470,7 +491,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             <div className="daily-category-chip">Single Jeopardy: {challenge.single_category.name}</div>
             <div className="daily-category-chip">Double Jeopardy: {challenge.double_category.name}</div>
             <div className="daily-category-chip muted">Final Category: {challenge.final_clue.category}</div>
-            <button ref={startButtonRef} className="submit-btn" onClick={() => setHasStarted(true)}>Start Daily Challenge</button>
+            <button ref={startButtonRef} className="submit-btn" onClick={startChallenge}>Start Daily Challenge</button>
           </div>
         )}
 
@@ -496,6 +517,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 <div className="result-value">
                   {answerResult.score_delta > 0 ? '+' : ''}${answerResult.score_delta.toLocaleString()}
                 </div>
+                <div className="result-hint">Tap anywhere to continue</div>
                 <button
                   className="submit-btn"
                   onClick={(e) => {
@@ -576,6 +598,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 <div className="result-value">
                   {finalResult.score_delta >= 0 ? '+' : ''}${finalResult.score_delta.toLocaleString()}
                 </div>
+                <div className="result-hint">Tap anywhere to continue</div>
                 <button
                   className="submit-btn"
                   onClick={(e) => {
