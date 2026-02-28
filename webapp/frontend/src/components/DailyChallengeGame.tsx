@@ -79,6 +79,8 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const clueInputRef = useRef<HTMLInputElement>(null);
   const wagerInputRef = useRef<HTMLInputElement>(null);
   const finalInputRef = useRef<HTMLInputElement>(null);
+  const clueCardRef = useRef<HTMLDivElement>(null);
+  const finalCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -126,23 +128,33 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   useEffect(() => {
     if (!challenge) return;
 
+    const focusInputWithCard = (
+      inputRef: React.RefObject<HTMLInputElement | null>,
+      cardRef: React.RefObject<HTMLDivElement | null>,
+    ) => {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      }, 50);
+    };
+
     if (!hasStarted && !hasAnyProgress) {
       startButtonRef.current?.focus();
       return;
     }
 
     if (!answerResult && !finalResult && (step.stage === 'single' || step.stage === 'double')) {
-      clueInputRef.current?.focus();
+      focusInputWithCard(clueInputRef, clueCardRef);
       return;
     }
 
     if (!answerResult && step.stage === 'final' && challenge.progress.final.wager === null) {
-      wagerInputRef.current?.focus();
+      focusInputWithCard(wagerInputRef, finalCardRef);
       return;
     }
 
     if (!answerResult && !finalResult && step.stage === 'final' && challenge.progress.final.wager !== null) {
-      finalInputRef.current?.focus();
+      focusInputWithCard(finalInputRef, finalCardRef);
     }
   }, [challenge, hasStarted, hasAnyProgress, step.stage, answerResult, finalResult]);
 
@@ -463,7 +475,11 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
         )}
 
         {hasStarted && (step.stage === 'single' || step.stage === 'double' || answerResult) && clue && (
-          <div className="daily-card">
+          <div
+            ref={clueCardRef}
+            className="daily-card"
+            onClick={answerResult ? advanceFromClueResult : undefined}
+          >
             <div className="clue-category">
               {clue.stage === 'single' ? 'Single Jeopardy' : 'Double Jeopardy'} - {clue.category}
             </div>
@@ -472,10 +488,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             <div className="clue-text">{clue.clue.clue_text}</div>
 
             {answerResult ? (
-              <div
-                className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}
-                onClick={advanceFromClueResult}
-              >
+              <div className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}>
                 <div className={`result-banner ${answerResult.correct ? 'correct' : answerResult.skipped ? 'skipped' : 'incorrect'}`}>
                   {answerResult.correct ? 'CORRECT' : answerResult.skipped ? 'SKIPPED' : 'INCORRECT'}
                 </div>
@@ -485,7 +498,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 </div>
                 <button
                   className="submit-btn"
-                  onClick={advanceFromClueResult}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    advanceFromClueResult();
+                  }}
                 >
                   Next Clue
                 </button>
@@ -499,6 +515,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
                   onKeyDown={handleClueInputKeyDown}
+                  onFocus={() => clueCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   disabled={submitting}
                 />
                 <div className="daily-answer-actions">
@@ -515,7 +532,11 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
         )}
 
         {hasStarted && !answerResult && (finalResult || step.stage === 'final') && (
-          <div className="daily-card">
+          <div
+            ref={finalCardRef}
+            className="daily-card"
+            onClick={finalResult ? advanceFromFinalResult : undefined}
+          >
             <div className="dd-banner">FINAL JEOPARDY</div>
             <div className="clue-category">The category is: {challenge.final_clue.category}</div>
             <div className="clue-air-date">Aired on: {formatAirDate(challenge.final_clue.air_date)}</div>
@@ -531,6 +552,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   value={wagerInput}
                   onChange={(e) => setWagerInput(e.target.value)}
                   onKeyDown={handleWagerInputKeyDown}
+                  onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   disabled={submitting || Boolean(finalResult)}
                 />
                 <button className="submit-btn" onClick={handleLockFinalWager} disabled={submitting}>
@@ -546,10 +568,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             )}
 
             {finalResult ? (
-              <div
-                className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}
-                onClick={advanceFromFinalResult}
-              >
+              <div className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}>
                 <div className={`result-banner ${finalResult.correct ? 'correct' : 'incorrect'}`}>
                   {finalResult.correct ? 'CORRECT' : 'INCORRECT'}
                 </div>
@@ -559,7 +578,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 </div>
                 <button
                   className="submit-btn"
-                  onClick={advanceFromFinalResult}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    advanceFromFinalResult();
+                  }}
                 >
                   View Final Score
                 </button>
@@ -573,6 +595,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
                   onKeyDown={handleFinalInputKeyDown}
+                  onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   disabled={submitting}
                 />
                 <button className="submit-btn" onClick={handleSubmitFinal} disabled={submitting || !response.trim()}>
