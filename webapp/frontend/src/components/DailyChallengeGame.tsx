@@ -162,15 +162,13 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
 
       if (answerResult) {
         e.preventDefault();
-        setAnswerResult(null);
-        setResponse('');
+        advanceFromClueResult();
         return;
       }
 
       if (finalResult) {
         e.preventDefault();
-        setFinalResult(null);
-        setResponse('');
+        advanceFromFinalResult();
       }
     };
 
@@ -380,6 +378,18 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     void handleLockFinalWager();
   };
 
+  const advanceFromClueResult = () => {
+    if (!answerResult) return;
+    setAnswerResult(null);
+    setResponse('');
+  };
+
+  const advanceFromFinalResult = () => {
+    if (!finalResult) return;
+    setFinalResult(null);
+    setResponse('');
+  };
+
   if (loading) {
     return (
       <div className="start-screen">
@@ -462,7 +472,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             <div className="clue-text">{clue.clue.clue_text}</div>
 
             {answerResult ? (
-              <div className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}>
+              <div
+                className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}
+                onClick={advanceFromClueResult}
+              >
                 <div className={`result-banner ${answerResult.correct ? 'correct' : answerResult.skipped ? 'skipped' : 'incorrect'}`}>
                   {answerResult.correct ? 'CORRECT' : answerResult.skipped ? 'SKIPPED' : 'INCORRECT'}
                 </div>
@@ -472,10 +485,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 </div>
                 <button
                   className="submit-btn"
-                  onClick={() => {
-                    setAnswerResult(null);
-                    setResponse('');
-                  }}
+                  onClick={advanceFromClueResult}
                 >
                   Next Clue
                 </button>
@@ -536,7 +546,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             )}
 
             {finalResult ? (
-              <div className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}>
+              <div
+                className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}
+                onClick={advanceFromFinalResult}
+              >
                 <div className={`result-banner ${finalResult.correct ? 'correct' : 'incorrect'}`}>
                   {finalResult.correct ? 'CORRECT' : 'INCORRECT'}
                 </div>
@@ -546,10 +559,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 </div>
                 <button
                   className="submit-btn"
-                  onClick={() => {
-                    setFinalResult(null);
-                    setResponse('');
-                  }}
+                  onClick={advanceFromFinalResult}
                 >
                   View Final Score
                 </button>
