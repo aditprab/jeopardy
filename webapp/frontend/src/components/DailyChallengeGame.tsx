@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchDailyChallenge,
   submitDailyAnswer,
@@ -75,6 +75,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const [wagerInput, setWagerInput] = useState('0');
   const [hasStarted, setHasStarted] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
+  const startButtonRef = useRef<HTMLButtonElement>(null);
+  const clueInputRef = useRef<HTMLInputElement>(null);
+  const wagerInputRef = useRef<HTMLInputElement>(null);
+  const finalInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -118,6 +122,61 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       setWagerInput(String(Math.max(0, Math.min(max, Math.abs(challenge.progress.current_score)))));
     }
   }, [challenge, step.stage, finalResult]);
+
+  useEffect(() => {
+    if (!challenge) return;
+
+    if (!hasStarted && !hasAnyProgress) {
+      startButtonRef.current?.focus();
+      return;
+    }
+
+    if (!answerResult && !finalResult && (step.stage === 'single' || step.stage === 'double')) {
+      clueInputRef.current?.focus();
+      return;
+    }
+
+    if (!answerResult && step.stage === 'final' && challenge.progress.final.wager === null) {
+      wagerInputRef.current?.focus();
+      return;
+    }
+
+    if (!answerResult && !finalResult && step.stage === 'final' && challenge.progress.final.wager !== null) {
+      finalInputRef.current?.focus();
+    }
+  }, [challenge, hasStarted, hasAnyProgress, step.stage, answerResult, finalResult]);
+
+  useEffect(() => {
+    const onGlobalEnter = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || submitting || !challenge) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+
+      if (!hasStarted && !hasAnyProgress) {
+        e.preventDefault();
+        setHasStarted(true);
+        return;
+      }
+
+      if (answerResult) {
+        e.preventDefault();
+        setAnswerResult(null);
+        setResponse('');
+        return;
+      }
+
+      if (finalResult) {
+        e.preventDefault();
+        setFinalResult(null);
+        setResponse('');
+      }
+    };
+
+    window.addEventListener('keydown', onGlobalEnter);
+    return () => window.removeEventListener('keydown', onGlobalEnter);
+  }, [challenge, submitting, hasStarted, hasAnyProgress, answerResult, finalResult]);
 
   const clue = useMemo(() => {
     if (!challenge) return null;
@@ -389,7 +448,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             <div className="daily-category-chip">Single Jeopardy: {challenge.single_category.name}</div>
             <div className="daily-category-chip">Double Jeopardy: {challenge.double_category.name}</div>
             <div className="daily-category-chip muted">Final Category: {challenge.final_clue.category}</div>
-            <button className="submit-btn" onClick={() => setHasStarted(true)}>Start Daily Challenge</button>
+            <button ref={startButtonRef} className="submit-btn" onClick={() => setHasStarted(true)}>Start Daily Challenge</button>
           </div>
         )}
 
@@ -424,6 +483,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             ) : (
               <>
                 <input
+                  ref={clueInputRef}
                   className="response-input"
                   placeholder="What is..."
                   value={response}
@@ -453,6 +513,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
               <>
                 <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>
                 <input
+                  ref={wagerInputRef}
                   type="number"
                   className="wager-input"
                   min={0}
@@ -496,6 +557,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
             ) : challenge.progress.final.wager !== null ? (
               <>
                 <input
+                  ref={finalInputRef}
                   className="response-input"
                   placeholder="Who is / What is..."
                   value={response}
