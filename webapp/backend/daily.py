@@ -19,6 +19,7 @@ MIN_AIR_DATE = date(2005, 1, 1)
 
 SINGLE_VALUES = [200, 400, 600, 800, 1000]
 DOUBLE_VALUES = [400, 800, 1200, 1600, 2000]
+LEADERBOARD_NAME_MAX_LENGTH = 32
 
 
 @dataclass
@@ -30,6 +31,13 @@ class DailyChallenge:
     double_clue_ids: list[int]
     final_category_name: str
     final_clue_id: int
+
+
+@dataclass
+class PlayerProfile:
+    id: int
+    player_token: str
+    leaderboard_name: str | None
 
 
 DEFAULT_ANSWERS = {
@@ -53,6 +61,20 @@ def ensure_daily_schema() -> None:
     conn = get_conn()
     try:
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS player_profiles (
+                    id BIGSERIAL PRIMARY KEY,
+                    player_token TEXT NOT NULL UNIQUE,
+                    leaderboard_name TEXT,
+                    auth_provider TEXT,
+                    auth_subject TEXT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE (auth_provider, auth_subject)
+                )
+                """
+            )
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS daily_challenges (
@@ -146,6 +168,37 @@ def ensure_daily_schema() -> None:
                 """
                 CREATE INDEX IF NOT EXISTS idx_daily_progress_challenge_date
                 ON daily_player_progress(challenge_date)
+                """
+            )
+            cur.execute(
+                """
+                ALTER TABLE daily_player_progress
+                ADD COLUMN IF NOT EXISTS player_id BIGINT REFERENCES player_profiles(id)
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO player_profiles (player_token)
+                SELECT DISTINCT dpp.player_token
+                FROM daily_player_progress dpp
+                LEFT JOIN player_profiles pp ON pp.player_token = dpp.player_token
+                WHERE pp.id IS NULL
+                """
+            )
+            cur.execute(
+                """
+                UPDATE daily_player_progress dpp
+                SET player_id = pp.id
+                FROM player_profiles pp
+                WHERE dpp.player_id IS NULL
+                  AND pp.player_token = dpp.player_token
+                """
+            )
+            cur.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_progress_challenge_player
+                ON daily_player_progress(challenge_date, player_id)
+                WHERE player_id IS NOT NULL
                 """
             )
             cur.execute(
@@ -421,10 +474,56 @@ def _fetch_clues(cur, clue_ids: list[int]) -> dict[int, dict[str, Any]]:
     return by_id
 
 
+def _normalize_leaderboard_name(value: str) -> str:
+    normalized = " ".join(value.strip().split())
+    if not normalized:
+        raise ValueError("Leaderboard name is required")
+    if len(normalized) > LEADERBOARD_NAME_MAX_LENGTH:
+        raise ValueError(f"Leaderboard name must be {LEADERBOARD_NAME_MAX_LENGTH} characters or fewer")
+    return normalized
+
+
+def _load_or_create_player_profile(cur, player_token: str, *, for_update: bool = False) -> PlayerProfile:
+    lock_clause = "FOR UPDATE" if for_update else ""
+    cur.execute(
+        f"""
+        SELECT id, player_token, leaderboard_name
+        FROM player_profiles
+        WHERE player_token = %s
+        {lock_clause}
+        """,
+        (player_token,),
+    )
+    row = cur.fetchone()
+    if row:
+        return PlayerProfile(
+            id=int(row[0]),
+            player_token=row[1],
+            leaderboard_name=row[2],
+        )
+
+    cur.execute(
+        """
+        INSERT INTO player_profiles (player_token)
+        VALUES (%s)
+        ON CONFLICT (player_token)
+        DO UPDATE SET updated_at = player_profiles.updated_at
+        RETURNING id, player_token, leaderboard_name
+        """,
+        (player_token,),
+    )
+    row = cur.fetchone()
+    return PlayerProfile(
+        id=int(row[0]),
+        player_token=row[1],
+        leaderboard_name=row[2],
+    )
+
+
 def _load_or_create_progress(
     cur,
     challenge_date: date,
-    player_token: str,
+    player_profile: PlayerProfile,
     *,
     for_update: bool = False,
 ) -> dict[str, Any]:
@@ -432,18 +531,31 @@ def _load_or_create_progress(
     cur.execute(
         f"""
         SELECT id, current_score, answers_json, final_wager, final_response, final_correct,
-               final_expected_response, final_score_delta, completed_at, final_attempt_id
+               final_expected_response, final_score_delta, completed_at, final_attempt_id, player_id
         FROM daily_player_progress
-        WHERE challenge_date = %s AND player_token = %s
+        WHERE challenge_date = %s
+          AND (player_id = %s OR player_token = %s)
+        ORDER BY CASE WHEN player_id = %s THEN 0 ELSE 1 END
+        LIMIT 1
         {lock_clause}
         """,
-        (challenge_date, player_token),
+        (challenge_date, player_profile.id, player_profile.player_token, player_profile.id),
     )
     row = cur.fetchone()
     if row:
         answers = row[2] if row[2] else _copy_default_answers()
         if "single" not in answers or "double" not in answers:
             answers = _copy_default_answers()
+        if row[10] != player_profile.id:
+            cur.execute(
+                """
+                UPDATE daily_player_progress
+                SET player_id = %s,
+                    updated_at = now()
+                WHERE id = %s
+                """,
+                (player_profile.id, row[0]),
+            )
         return {
             "id": row[0],
             "current_score": row[1],
@@ -462,13 +574,14 @@ def _load_or_create_progress(
         """
         INSERT INTO daily_player_progress (
             challenge_date,
+            player_id,
             player_token,
             answers_json
         )
-        VALUES (%s, %s, %s)
+        VALUES (%s, %s, %s, %s)
         RETURNING id
         """,
-        (challenge_date, player_token, Json(answers)),
+        (challenge_date, player_profile.id, player_profile.player_token, Json(answers)),
     )
     progress_id = cur.fetchone()[0]
     return {
@@ -502,12 +615,20 @@ def _serialize_progress(progress: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _serialize_player_profile(profile: PlayerProfile) -> dict[str, Any]:
+    return {
+        "leaderboard_name": profile.leaderboard_name,
+        "has_leaderboard_name": profile.leaderboard_name is not None,
+    }
+
+
 def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) -> dict[str, Any]:
     conn = get_conn()
     try:
         with conn.cursor() as cur:
+            player_profile = _load_or_create_player_profile(cur, player_token, for_update=False)
             clue_map = _fetch_clues(cur, challenge.single_clue_ids + challenge.double_clue_ids + [challenge.final_clue_id])
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=False)
+            progress = _load_or_create_progress(cur, challenge.challenge_date, player_profile, for_update=False)
             conn.commit()
 
         single_clues = [clue_map[cid] for cid in challenge.single_clue_ids]
@@ -549,8 +670,121 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
                 "clue_text": final_clue_text,
                 "air_date": final_clue["air_date"],
             },
+            "player": _serialize_player_profile(player_profile),
             "progress": _serialize_progress(progress),
         }
+    finally:
+        put_conn(conn)
+
+
+def upsert_player_profile(player_token: str, leaderboard_name: str) -> dict[str, Any]:
+    normalized_name = _normalize_leaderboard_name(leaderboard_name)
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO player_profiles (player_token, leaderboard_name)
+                VALUES (%s, %s)
+                ON CONFLICT (player_token)
+                DO UPDATE SET leaderboard_name = EXCLUDED.leaderboard_name,
+                              updated_at = now()
+                RETURNING id, player_token, leaderboard_name
+                """,
+                (player_token, normalized_name),
+            )
+            row = cur.fetchone()
+        conn.commit()
+        return {
+            "player": _serialize_player_profile(
+                PlayerProfile(
+                    id=int(row[0]),
+                    player_token=row[1],
+                    leaderboard_name=row[2],
+                )
+            )
+        }
+    finally:
+        put_conn(conn)
+
+
+def get_daily_leaderboard(challenge_date: date, player_token: str) -> dict[str, Any]:
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            player_profile = _load_or_create_player_profile(cur, player_token, for_update=False)
+            cur.execute(
+                """
+                SELECT
+                    dpp.player_id,
+                    COALESCE(NULLIF(pp.leaderboard_name, ''), 'Anonymous'),
+                    dpp.current_score,
+                    dpp.completed_at,
+                    dpp.updated_at
+                FROM daily_player_progress dpp
+                JOIN player_profiles pp ON pp.id = dpp.player_id
+                WHERE dpp.challenge_date = %s
+                  AND dpp.completed_at IS NOT NULL
+                ORDER BY dpp.current_score DESC, dpp.completed_at ASC, dpp.id ASC
+                LIMIT 25
+                """,
+                (challenge_date,),
+            )
+            rows = cur.fetchall()
+            entries: list[dict[str, Any]] = []
+            current_player_entry: dict[str, Any] | None = None
+            for idx, row in enumerate(rows, start=1):
+                entry = {
+                    "rank": idx,
+                    "player_name": row[1],
+                    "score": row[2],
+                    "completed_at": row[3].isoformat() if row[3] else None,
+                    "is_current_player": row[0] == player_profile.id,
+                }
+                entries.append(entry)
+                if entry["is_current_player"]:
+                    current_player_entry = entry
+
+            if current_player_entry is None:
+                cur.execute(
+                    """
+                    SELECT current_score, completed_at
+                    FROM daily_player_progress
+                    WHERE challenge_date = %s
+                      AND player_id = %s
+                      AND completed_at IS NOT NULL
+                    """,
+                    (challenge_date, player_profile.id),
+                )
+                row = cur.fetchone()
+                if row:
+                    cur.execute(
+                        """
+                        SELECT COUNT(*) + 1
+                        FROM daily_player_progress
+                        WHERE challenge_date = %s
+                          AND completed_at IS NOT NULL
+                          AND (
+                              current_score > %s
+                              OR (current_score = %s AND completed_at < %s)
+                          )
+                        """,
+                        (challenge_date, row[0], row[0], row[1]),
+                    )
+                    rank = int(cur.fetchone()[0])
+                    current_player_entry = {
+                        "rank": rank,
+                        "player_name": player_profile.leaderboard_name or "Anonymous",
+                        "score": row[0],
+                        "completed_at": row[1].isoformat() if row[1] else None,
+                        "is_current_player": True,
+                    }
+            conn.commit()
+            return {
+                "challenge_date": challenge_date.isoformat(),
+                "entries": entries,
+                "current_player_entry": current_player_entry,
+            }
     finally:
         put_conn(conn)
 
@@ -577,7 +811,13 @@ def submit_daily_answer(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
+            player_profile = _load_or_create_player_profile(cur, player_token, for_update=True)
+            progress = _load_or_create_progress(
+                cur,
+                challenge.challenge_date,
+                player_profile,
+                for_update=True,
+            )
             if progress["completed_at"]:
                 raise ValueError("Daily challenge already completed")
 
@@ -678,7 +918,13 @@ def submit_daily_final_wager(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
+            player_profile = _load_or_create_player_profile(cur, player_token, for_update=True)
+            progress = _load_or_create_progress(
+                cur,
+                challenge.challenge_date,
+                player_profile,
+                for_update=True,
+            )
 
             if progress["completed_at"]:
                 conn.commit()
@@ -735,7 +981,13 @@ def submit_daily_final(
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            progress = _load_or_create_progress(cur, challenge.challenge_date, player_token, for_update=True)
+            player_profile = _load_or_create_player_profile(cur, player_token, for_update=True)
+            progress = _load_or_create_progress(
+                cur,
+                challenge.challenge_date,
+                player_profile,
+                for_update=True,
+            )
 
             if progress["completed_at"]:
                 conn.commit()

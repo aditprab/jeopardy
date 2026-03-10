@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  fetchDailyLeaderboard,
   fetchDailyChallenge,
   submitDailyAnswer,
   submitDailyFinal,
   submitDailyFinalWager,
+  updatePlayerProfile,
 } from '../api';
 import type {
   DailyChallengeData,
   DailyProgressAnswer,
   DailyAnswerResult,
   DailyFinalResult,
+  DailyLeaderboardData,
 } from '../types';
+import DailyLeaderboard from './DailyLeaderboard';
 import Scoreboard from './Scoreboard';
 
 type Stage = 'single' | 'double' | 'final' | 'done';
@@ -68,7 +72,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [challenge, setChallenge] = useState<DailyChallengeData | null>(null);
+  const [leaderboard, setLeaderboard] = useState<DailyLeaderboardData | null>(null);
   const [response, setResponse] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [answerResult, setAnswerResult] = useState<DailyAnswerResult | null>(null);
   const [finalResult, setFinalResult] = useState<DailyFinalResult | null>(null);
@@ -76,6 +83,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   const [hasStarted, setHasStarted] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
   const startButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const clueInputRef = useRef<HTMLInputElement>(null);
   const wagerInputRef = useRef<HTMLInputElement>(null);
   const finalInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +116,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   };
 
   const startChallenge = () => {
+    if (!challenge?.player.has_leaderboard_name) {
+      nameInputRef.current?.focus();
+      return;
+    }
     setHasStarted(true);
     focusForStage('single', false);
   };
@@ -118,7 +130,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       setError('');
       try {
         const data = await fetchDailyChallenge();
+        const leaderboardData = await fetchDailyLeaderboard();
         setChallenge(data);
+        setLeaderboard(leaderboardData);
+        setNameInput(data.player.leaderboard_name ?? '');
         setWagerInput('0');
       } catch {
         setError('Failed to load daily challenge.');
@@ -159,6 +174,10 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     if (!challenge) return;
 
     if (!hasStarted && !hasAnyProgress) {
+      if (!challenge.player.has_leaderboard_name) {
+        nameInputRef.current?.focus();
+        return;
+      }
       startButtonRef.current?.focus();
       return;
     }
@@ -186,7 +205,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       const tag = target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
 
-      if (!hasStarted && !hasAnyProgress) {
+      if (!hasStarted && !hasAnyProgress && challenge.player.has_leaderboard_name) {
         e.preventDefault();
         startChallenge();
         return;
@@ -269,6 +288,30 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
     setChallenge(updated);
   };
 
+  const refreshLeaderboard = async () => {
+    const leaderboardData = await fetchDailyLeaderboard();
+    setLeaderboard(leaderboardData);
+  };
+
+  const handleSaveLeaderboardName = async () => {
+    if (!challenge || !nameInput.trim()) return;
+    setSavingName(true);
+    setError('');
+    try {
+      const result = await updatePlayerProfile(nameInput);
+      setChallenge({
+        ...challenge,
+        player: result.player,
+      });
+      setNameInput(result.player.leaderboard_name ?? '');
+      startButtonRef.current?.focus();
+    } catch {
+      setError('Failed to save leaderboard name.');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const handleSubmitClue = async () => {
     if (!challenge || !clue || !response.trim()) return;
     setSubmitting(true);
@@ -349,6 +392,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       };
       updated.progress.current_score = result.final_score;
       setChallenge(updated);
+      await refreshLeaderboard();
     } catch {
       setError('Failed to submit final clue.');
     } finally {
@@ -395,6 +439,17 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
       return;
     }
     void handleSkipClue();
+  };
+
+  const handleNameInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || savingName || !challenge) return;
+    if (!challenge.player.has_leaderboard_name || nameInput.trim() !== (challenge.player.leaderboard_name ?? '')) {
+      void handleSaveLeaderboardName();
+      return;
+    }
+    if (!hasStarted && !hasAnyProgress) {
+      startChallenge();
+    }
   };
 
   const handleFinalInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -445,6 +500,7 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
   if (!challenge) return null;
 
   const maxWager = challenge.progress.current_score >= 0 ? challenge.progress.current_score : 0;
+  const hasUnsavedLeaderboardName = nameInput.trim() !== (challenge.player.leaderboard_name ?? '');
 
   return (
     <div className="daily-screen">
@@ -485,160 +541,196 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
           </div>
         </div>
 
-        {!hasStarted && !hasAnyProgress && (
-          <div className="daily-card daily-brief">
-            <div className="clue-category">Today's Categories</div>
-            <div className="daily-category-chip">Single Jeopardy: {challenge.single_category.name}</div>
-            <div className="daily-category-chip">Double Jeopardy: {challenge.double_category.name}</div>
-            <div className="daily-category-chip muted">Final Category: {challenge.final_clue.category}</div>
-            <button ref={startButtonRef} className="submit-btn" onClick={startChallenge}>Start Daily Challenge</button>
-          </div>
-        )}
-
-        {hasStarted && (step.stage === 'single' || step.stage === 'double' || answerResult) && clue && (
-          <div
-            ref={clueCardRef}
-            className="daily-card"
-            onClick={answerResult ? advanceFromClueResult : undefined}
-          >
-            <div className="clue-category">
-              {clue.stage === 'single' ? 'Single Jeopardy' : 'Double Jeopardy'} - {clue.category}
-            </div>
-            <div className="daily-value">${clue.clue.value.toLocaleString()}</div>
-            <div className="clue-air-date">Aired on: {formatAirDate(clue.clue.air_date)}</div>
-            <div className="clue-text">{clue.clue.clue_text}</div>
-
-            {answerResult ? (
-              <div className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}>
-                <div className={`result-banner ${answerResult.correct ? 'correct' : answerResult.skipped ? 'skipped' : 'incorrect'}`}>
-                  {answerResult.correct ? 'CORRECT' : answerResult.skipped ? 'SKIPPED' : 'INCORRECT'}
+        <div className="daily-main-grid">
+          <div className="daily-main-column">
+            {!hasStarted && !hasAnyProgress && (
+              <div className="daily-card daily-brief">
+                <div className="clue-category">Today&apos;s Categories</div>
+                <div className="daily-category-chip">Single Jeopardy: {challenge.single_category.name}</div>
+                <div className="daily-category-chip">Double Jeopardy: {challenge.double_category.name}</div>
+                <div className="daily-category-chip muted">Final Category: {challenge.final_clue.category}</div>
+                <div className="leaderboard-name-block">
+                  <label className="leaderboard-name-label" htmlFor="leaderboard-name">
+                    Leaderboard name
+                  </label>
+                  <input
+                    id="leaderboard-name"
+                    ref={nameInputRef}
+                    className="response-input"
+                    placeholder="Pick the name others will see"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onKeyDown={handleNameInputKeyDown}
+                    disabled={savingName}
+                  />
+                  <div className="leaderboard-name-actions">
+                    {(!challenge.player.has_leaderboard_name || hasUnsavedLeaderboardName) && (
+                      <button
+                        className="submit-btn"
+                        onClick={handleSaveLeaderboardName}
+                        disabled={savingName || !nameInput.trim()}
+                      >
+                        {savingName ? 'Saving...' : challenge.player.has_leaderboard_name ? 'Update Name' : 'Save Name'}
+                      </button>
+                    )}
+                    {challenge.player.has_leaderboard_name && !hasUnsavedLeaderboardName && (
+                      <button ref={startButtonRef} className="submit-btn" onClick={startChallenge}>
+                        Start Daily Challenge
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="expected">Correct response: {answerResult.expected}</div>
-                <div className="result-value">
-                  {answerResult.score_delta > 0 ? '+' : ''}${answerResult.score_delta.toLocaleString()}
-                </div>
-                <div className="result-hint">Tap anywhere to continue</div>
-                <button
-                  className="submit-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    advanceFromClueResult();
-                  }}
-                >
-                  Next Clue
-                </button>
               </div>
-            ) : (
-              <>
-                <input
-                  ref={clueInputRef}
-                  className="response-input"
-                  placeholder="What is..."
-                  value={response}
-                  onChange={(e) => setResponse(e.target.value)}
-                  onKeyDown={handleClueInputKeyDown}
-                  onFocus={() => clueCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  disabled={submitting}
-                />
-                <div className="daily-answer-actions">
-                  <button className="submit-btn" onClick={handleSubmitClue} disabled={submitting || !response.trim()}>
-                    {submitting ? 'Submitting...' : 'Submit Answer'}
-                  </button>
-                  <button className="skip-btn" onClick={handleSkipClue} disabled={submitting}>
-                    Skip
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {hasStarted && !answerResult && (finalResult || step.stage === 'final') && (
-          <div
-            ref={finalCardRef}
-            className="daily-card"
-            onClick={finalResult ? advanceFromFinalResult : undefined}
-          >
-            <div className="dd-banner">FINAL JEOPARDY</div>
-            <div className="clue-category">The category is: {challenge.final_clue.category}</div>
-            <div className="clue-air-date">Aired on: {formatAirDate(challenge.final_clue.air_date)}</div>
-            {challenge.progress.final.wager === null ? (
-              <>
-                <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>
-                <input
-                  ref={wagerInputRef}
-                  type="number"
-                  className="wager-input"
-                  min={0}
-                  max={maxWager}
-                  value={wagerInput}
-                  onChange={(e) => setWagerInput(e.target.value)}
-                  onKeyDown={handleWagerInputKeyDown}
-                  onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  disabled={submitting || Boolean(finalResult)}
-                />
-                <button className="submit-btn" onClick={handleLockFinalWager} disabled={submitting}>
-                  {submitting ? 'Locking...' : 'Lock Wager'}
-                </button>
-              </>
-            ) : (
-              <div className="wager-prompt">Wager Locked: ${challenge.progress.final.wager.toLocaleString()}</div>
             )}
 
-            {challenge.progress.final.wager !== null && challenge.final_clue.clue_text && (
-              <div className="clue-text">{challenge.final_clue.clue_text}</div>
-            )}
+            {hasStarted && (step.stage === 'single' || step.stage === 'double' || answerResult) && clue && (
+              <div
+                ref={clueCardRef}
+                className="daily-card"
+                onClick={answerResult ? advanceFromClueResult : undefined}
+              >
+                <div className="clue-category">
+                  {clue.stage === 'single' ? 'Single Jeopardy' : 'Double Jeopardy'} - {clue.category}
+                </div>
+                <div className="daily-value">${clue.clue.value.toLocaleString()}</div>
+                <div className="clue-air-date">Aired on: {formatAirDate(clue.clue.air_date)}</div>
+                <div className="clue-text">{clue.clue.clue_text}</div>
 
-            {finalResult ? (
-              <div className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}>
-                <div className={`result-banner ${finalResult.correct ? 'correct' : 'incorrect'}`}>
-                  {finalResult.correct ? 'CORRECT' : 'INCORRECT'}
-                </div>
-                <div className="expected">Correct response: {finalResult.expected}</div>
-                <div className="result-value">
-                  {finalResult.score_delta >= 0 ? '+' : ''}${finalResult.score_delta.toLocaleString()}
-                </div>
-                <div className="result-hint">Tap anywhere to continue</div>
-                <button
-                  className="submit-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    advanceFromFinalResult();
-                  }}
-                >
-                  View Final Score
-                </button>
+                {answerResult ? (
+                  <div className={`daily-result ${answerResult.correct ? 'is-correct' : 'is-incorrect'}`}>
+                    <div className={`result-banner ${answerResult.correct ? 'correct' : answerResult.skipped ? 'skipped' : 'incorrect'}`}>
+                      {answerResult.correct ? 'CORRECT' : answerResult.skipped ? 'SKIPPED' : 'INCORRECT'}
+                    </div>
+                    <div className="expected">Correct response: {answerResult.expected}</div>
+                    <div className="result-value">
+                      {answerResult.score_delta > 0 ? '+' : ''}${answerResult.score_delta.toLocaleString()}
+                    </div>
+                    <div className="result-hint">Tap anywhere to continue</div>
+                    <button
+                      className="submit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        advanceFromClueResult();
+                      }}
+                    >
+                      Next Clue
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      ref={clueInputRef}
+                      className="response-input"
+                      placeholder="What is..."
+                      value={response}
+                      onChange={(e) => setResponse(e.target.value)}
+                      onKeyDown={handleClueInputKeyDown}
+                      onFocus={() => clueCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      disabled={submitting}
+                    />
+                    <div className="daily-answer-actions">
+                      <button className="submit-btn" onClick={handleSubmitClue} disabled={submitting || !response.trim()}>
+                        {submitting ? 'Submitting...' : 'Submit Answer'}
+                      </button>
+                      <button className="skip-btn" onClick={handleSkipClue} disabled={submitting}>
+                        Skip
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            ) : challenge.progress.final.wager !== null ? (
-              <>
-                <input
-                  ref={finalInputRef}
-                  className="response-input"
-                  placeholder="Who is / What is..."
-                  value={response}
-                  onChange={(e) => setResponse(e.target.value)}
-                  onKeyDown={handleFinalInputKeyDown}
-                  onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  disabled={submitting}
-                />
-                <button className="submit-btn" onClick={handleSubmitFinal} disabled={submitting || !response.trim()}>
-                  {submitting ? 'Submitting...' : 'Submit Final'}
-                </button>
-              </>
-            ) : null}
-          </div>
-        )}
+            )}
 
-        {hasStarted && step.stage === 'done' && !finalResult && (
-          <div className="daily-card">
-            <div className="result-banner correct">Challenge Complete</div>
-            <div className="game-over-text">
-              Final Score: {challenge.progress.current_score < 0 ? '-' : ''}${Math.abs(challenge.progress.current_score).toLocaleString()}
-            </div>
-            <button className="submit-btn" onClick={handleShare}>Share Result</button>
-            {shareStatus && <div className="share-status">{shareStatus}</div>}
+            {hasStarted && !answerResult && (finalResult || step.stage === 'final') && (
+              <div
+                ref={finalCardRef}
+                className="daily-card"
+                onClick={finalResult ? advanceFromFinalResult : undefined}
+              >
+                <div className="dd-banner">FINAL JEOPARDY</div>
+                <div className="clue-category">The category is: {challenge.final_clue.category}</div>
+                <div className="clue-air-date">Aired on: {formatAirDate(challenge.final_clue.air_date)}</div>
+                {challenge.progress.final.wager === null ? (
+                  <>
+                    <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>
+                    <input
+                      ref={wagerInputRef}
+                      type="number"
+                      className="wager-input"
+                      min={0}
+                      max={maxWager}
+                      value={wagerInput}
+                      onChange={(e) => setWagerInput(e.target.value)}
+                      onKeyDown={handleWagerInputKeyDown}
+                      onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      disabled={submitting || Boolean(finalResult)}
+                    />
+                    <button className="submit-btn" onClick={handleLockFinalWager} disabled={submitting}>
+                      {submitting ? 'Locking...' : 'Lock Wager'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="wager-prompt">Wager Locked: ${challenge.progress.final.wager.toLocaleString()}</div>
+                )}
+
+                {challenge.progress.final.wager !== null && challenge.final_clue.clue_text && (
+                  <div className="clue-text">{challenge.final_clue.clue_text}</div>
+                )}
+
+                {finalResult ? (
+                  <div className={`daily-result ${finalResult.correct ? 'is-correct' : 'is-incorrect'}`}>
+                    <div className={`result-banner ${finalResult.correct ? 'correct' : 'incorrect'}`}>
+                      {finalResult.correct ? 'CORRECT' : 'INCORRECT'}
+                    </div>
+                    <div className="expected">Correct response: {finalResult.expected}</div>
+                    <div className="result-value">
+                      {finalResult.score_delta >= 0 ? '+' : ''}${finalResult.score_delta.toLocaleString()}
+                    </div>
+                    <div className="result-hint">Tap anywhere to continue</div>
+                    <button
+                      className="submit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        advanceFromFinalResult();
+                      }}
+                    >
+                      View Final Score
+                    </button>
+                  </div>
+                ) : challenge.progress.final.wager !== null ? (
+                  <>
+                    <input
+                      ref={finalInputRef}
+                      className="response-input"
+                      placeholder="Who is / What is..."
+                      value={response}
+                      onChange={(e) => setResponse(e.target.value)}
+                      onKeyDown={handleFinalInputKeyDown}
+                      onFocus={() => finalCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      disabled={submitting}
+                    />
+                    <button className="submit-btn" onClick={handleSubmitFinal} disabled={submitting || !response.trim()}>
+                      {submitting ? 'Submitting...' : 'Submit Final'}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {hasStarted && step.stage === 'done' && !finalResult && (
+              <div className="daily-card">
+                <div className="result-banner correct">Challenge Complete</div>
+                <div className="game-over-text">
+                  Final Score: {challenge.progress.current_score < 0 ? '-' : ''}${Math.abs(challenge.progress.current_score).toLocaleString()}
+                </div>
+                <button className="submit-btn" onClick={handleShare}>Share Result</button>
+                {shareStatus && <div className="share-status">{shareStatus}</div>}
+              </div>
+            )}
           </div>
-        )}
+
+          <DailyLeaderboard leaderboard={leaderboard} />
+        </div>
 
         {error && <div className="daily-error">{error}</div>}
       </div>

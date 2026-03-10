@@ -13,7 +13,7 @@ System currently serves the daily challenge product only.
 1. Client fetches daily challenge payload.
 2. Client submits answers (`single`, `double`, `final`).
 3. Backend grades submission and writes one `answer_grading_events` row.
-4. Backend updates `daily_player_progress`.
+4. Backend resolves the token to `player_profiles`, then updates `daily_player_progress`.
 5. Client reads updated score/progress.
 
 ## Grading Decision Tree
@@ -38,6 +38,7 @@ Primary grading table:
 
 Daily progress/state:
 
+- `player_profiles`
 - `daily_challenges`
 - `daily_player_progress`
 
@@ -55,7 +56,9 @@ Legacy tables retained for audit only:
 ## API Surface (Daily Only)
 
 - `GET /api/daily-challenge`
+- `GET /api/daily-challenge/leaderboard`
 - `POST /api/daily-challenge/answer`
 - `POST /api/daily-challenge/final/wager`
 - `POST /api/daily-challenge/final`
+- `POST /api/player-profile`
 - `POST /api/daily-challenge/reset`

@@ -174,9 +174,21 @@ CREATE TABLE daily_challenges (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE player_profiles (
+    id BIGSERIAL PRIMARY KEY,
+    player_token TEXT NOT NULL UNIQUE,
+    leaderboard_name TEXT,
+    auth_provider TEXT,
+    auth_subject TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (auth_provider, auth_subject)
+);
+
 CREATE TABLE daily_player_progress (
     id BIGSERIAL PRIMARY KEY,
     challenge_date DATE NOT NULL REFERENCES daily_challenges(challenge_date) ON DELETE CASCADE,
+    player_id BIGINT REFERENCES player_profiles(id),
     player_token TEXT NOT NULL,
     current_score INT NOT NULL DEFAULT 0,
     answers_json JSONB NOT NULL,
@@ -194,3 +206,6 @@ CREATE TABLE daily_player_progress (
 
 CREATE INDEX idx_daily_progress_token ON daily_player_progress(player_token);
 CREATE INDEX idx_daily_progress_challenge_date ON daily_player_progress(challenge_date);
+CREATE UNIQUE INDEX idx_daily_progress_challenge_player
+ON daily_player_progress(challenge_date, player_id)
+WHERE player_id IS NOT NULL;

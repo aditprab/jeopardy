@@ -3,6 +3,8 @@ import type {
   DailyAnswerResult,
   DailyFinalResult,
   DailyFinalWagerResult,
+  DailyLeaderboardData,
+  PlayerProfileResult,
 } from './types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -86,6 +88,31 @@ export async function submitDailyFinal(
   });
   updatePlayerToken(res);
   if (!res.ok) throw new Error('Failed to submit daily final answer');
+  return res.json();
+}
+
+export async function updatePlayerProfile(
+  leaderboardName: string,
+): Promise<PlayerProfileResult> {
+  const res = await fetch(apiUrl('/api/player-profile'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ leaderboard_name: leaderboardName }),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to update player profile');
+  return res.json();
+}
+
+export async function fetchDailyLeaderboard(): Promise<DailyLeaderboardData> {
+  const res = await fetch(apiUrl('/api/daily-challenge/leaderboard'), {
+    headers: authHeaders(),
+  });
+  updatePlayerToken(res);
+  if (!res.ok) throw new Error('Failed to fetch daily leaderboard');
   return res.json();
 }
 

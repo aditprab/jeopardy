@@ -48,12 +48,32 @@ export interface DailyProgress {
   final: DailyFinalProgress;
 }
 
+export interface PlayerProfile {
+  leaderboard_name: string | null;
+  has_leaderboard_name: boolean;
+}
+
+export interface DailyLeaderboardEntry {
+  rank: number;
+  player_name: string;
+  score: number;
+  completed_at: string | null;
+  is_current_player: boolean;
+}
+
+export interface DailyLeaderboardData {
+  challenge_date: string;
+  entries: DailyLeaderboardEntry[];
+  current_player_entry: DailyLeaderboardEntry | null;
+}
+
 export interface DailyChallengeData {
   challenge_date: string;
   timezone: string;
   single_category: DailyCategory;
   double_category: DailyCategory;
   final_clue: DailyFinalClue;
+  player: PlayerProfile;
   progress: DailyProgress;
 }
 
@@ -84,4 +104,8 @@ export interface DailyFinalResult {
 export interface DailyFinalWagerResult {
   idempotent: boolean;
   wager: number | null;
+}
+
+export interface PlayerProfileResult {
+  player: PlayerProfile;
 }

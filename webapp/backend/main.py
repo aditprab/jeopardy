@@ -11,12 +11,14 @@ try:
     from .daily import (
         ensure_daily_schema,
         get_daily_challenge_payload,
+        get_daily_leaderboard,
         get_or_create_daily_challenge,
         reset_daily_progress,
         submit_daily_answer,
         submit_daily_final,
         submit_daily_final_wager,
         today_et,
+        upsert_player_profile,
     )
     from .grading import ensure_grading_schema
 except ImportError:
@@ -25,12 +27,14 @@ except ImportError:
     from daily import (
         ensure_daily_schema,
         get_daily_challenge_payload,
+        get_daily_leaderboard,
         get_or_create_daily_challenge,
         reset_daily_progress,
         submit_daily_answer,
         submit_daily_final,
         submit_daily_final_wager,
         today_et,
+        upsert_player_profile,
     )
     from grading import ensure_grading_schema
 
@@ -75,6 +79,10 @@ class DailyFinalRequest(BaseModel):
 
 class DailyFinalWagerRequest(BaseModel):
     wager: int
+
+
+class PlayerProfileRequest(BaseModel):
+    leaderboard_name: str
 
 
 @app.get("/api/daily-challenge")
@@ -153,6 +161,37 @@ def daily_final(
             player_token=token,
             response_text=req.response,
         )
+        response.headers["X-Player-Token"] = token
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/daily-challenge/leaderboard")
+def daily_leaderboard(
+    response: Response,
+    player_token: str | None = Header(default=None, alias="X-Player-Token"),
+):
+    token = (player_token or "").strip() or str(uuid4())
+    challenge_date = today_et()
+    try:
+        challenge = get_or_create_daily_challenge(challenge_date)
+        result = get_daily_leaderboard(challenge.challenge_date, token)
+        response.headers["X-Player-Token"] = token
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/player-profile")
+def update_player_profile(
+    req: PlayerProfileRequest,
+    response: Response,
+    player_token: str | None = Header(default=None, alias="X-Player-Token"),
+):
+    token = (player_token or "").strip() or str(uuid4())
+    try:
+        result = upsert_player_profile(token, req.leaderboard_name)
         response.headers["X-Player-Token"] = token
         return result
     except ValueError as e:
