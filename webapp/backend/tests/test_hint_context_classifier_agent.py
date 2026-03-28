@@ -70,9 +70,9 @@ class HintContextClassifierAgentTests(unittest.TestCase):
     def test_run_classifier_normalizes_negative_reason_code(self):
         classification = run_hint_context_classifier(
             HintContextClassifierInput(
-                clue_text="This city is known as the Windy City",
-                expected_response="Chicago",
-                category="Cities",
+                clue_text="This city is currently the home of the reigning monarch",
+                expected_response="London",
+                category="Capital Cities",
                 air_date="2017-05-01",
             ),
             runner=FakeRunner(
@@ -87,6 +87,20 @@ class HintContextClassifierAgentTests(unittest.TestCase):
         self.assertFalse(classification.is_point_in_time)
         self.assertEqual(classification.reason_code, "not_point_in_time")
         self.assertIn("normalized_negative_reason_code", classification.guardrail_flags)
+
+    def test_run_classifier_short_circuits_without_temporal_anchor(self):
+        classification = run_hint_context_classifier(
+            HintContextClassifierInput(
+                clue_text="This city is known as the Windy City",
+                expected_response="Chicago",
+                category="Cities",
+                air_date="2017-05-01",
+            )
+        )
+        self.assertFalse(classification.is_point_in_time)
+        self.assertEqual(classification.reason_code, "not_point_in_time")
+        self.assertIn("no_temporal_anchor", classification.guardrail_flags)
+        self.assertEqual(classification.model, "deterministic_fallback")
 
     def test_observed_path_records_run_and_returns_classification(self):
         cur = FakeCursor()

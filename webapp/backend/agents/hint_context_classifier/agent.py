@@ -30,6 +30,20 @@ PROMPT_VERSION = "hint_context_prompt_v1"
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_TIMEOUT_MS = 7000
 MAX_REASON_CHARS = 600
+TEMPORAL_ANCHORS = (
+    "current",
+    "currently",
+    "now",
+    "at the time",
+    "then",
+    "this year",
+    "this season",
+    "today",
+    "as of",
+    "incumbent",
+    "defending champion",
+    "reigning",
+)
 ALLOWED_REASON_CODES = {
     "current_officeholder",
     "current_titleholder",
@@ -72,6 +86,25 @@ def _usage_dict(prompt_tokens: int, completion_tokens: int, total_tokens: int) -
         "completion_tokens": completion_tokens,
         "total_tokens": total_tokens,
     }
+
+
+def _deterministic_not_point_in_time(reason: str) -> HintContextClassification:
+    return HintContextClassification(
+        is_point_in_time=False,
+        reason_code="not_point_in_time",
+        reason=reason,
+        confidence=0.99,
+        guardrail_flags=["no_temporal_anchor"],
+        model="deterministic_fallback",
+        prompt_version=PROMPT_VERSION,
+        usage=_usage_dict(0, 0, 0),
+        raw_output={"source": "deterministic"},
+    )
+
+
+def _has_temporal_anchor(clue_text: str) -> bool:
+    lowered = f" {clue_text.lower()} "
+    return any(f" {anchor} " in lowered for anchor in TEMPORAL_ANCHORS)
 
 
 def _schema() -> dict[str, object]:
@@ -132,6 +165,11 @@ def run_hint_context_classifier(
     *,
     runner: OpenAIJsonSchemaRunner | None = None,
 ) -> HintContextClassification:
+    if not _has_temporal_anchor(agent_input.clue_text):
+        return _deterministic_not_point_in_time(
+            "Clue lacks an explicit temporal anchor, so it is treated as not point-in-time-sensitive."
+        )
+
     runner = runner or _default_runner()
     request = JsonSchemaRequest(
         system_prompt=build_system_prompt(),
