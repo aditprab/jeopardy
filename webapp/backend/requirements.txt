@@ -3,3 +3,4 @@ uvicorn[standard]
 psycopg2-binary
 thefuzz
 openai
+langsmith>=0.3.13

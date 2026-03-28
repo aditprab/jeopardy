@@ -10,6 +10,11 @@ try:
 except ImportError:  # pragma: no cover - dependency may be installed after deploy
     OpenAI = None  # type: ignore[assignment]
 
+try:
+    from langsmith import wrappers as langsmith_wrappers
+except ImportError:  # pragma: no cover - optional dependency in some environments
+    langsmith_wrappers = None  # type: ignore[assignment]
+
 
 @dataclass(frozen=True)
 class AgentSpec:
@@ -83,7 +88,13 @@ class OpenAIJsonSchemaRunner:
         if not api_key:
             raise RuntimeError(f"{self.api_key_env_var} not configured")
         timeout_ms = int(os.getenv(self.timeout_env_var, str(self.default_timeout_ms)))
-        self._client = OpenAI(api_key=api_key, timeout=timeout_ms / 1000.0)
+        client = OpenAI(api_key=api_key, timeout=timeout_ms / 1000.0)
+        if (
+            langsmith_wrappers is not None
+            and os.getenv("LANGSMITH_TRACING", "").strip().lower() == "true"
+        ):
+            client = langsmith_wrappers.wrap_openai(client)
+        self._client = client
         return self._client
 
     def resolve_model(self, model: str | None = None) -> str:

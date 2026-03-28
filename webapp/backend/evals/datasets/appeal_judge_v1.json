@@ -1,0 +1,101 @@
+{
+  "dataset_name": "appeal_judge_v1",
+  "description": "Starter LangSmith eval dataset for the Jeopardy appeal judge agent.",
+  "agent_name": "appeal_judge",
+  "cases": [
+    {
+      "inputs": {
+        "clue_text": "This investor led Berkshire Hathaway",
+        "expected_response": "Warren Buffett",
+        "user_response": "Buffet",
+        "user_justification": null
+      },
+      "outputs": {
+        "final_correct": true,
+        "reason_code": "minor_typo_match"
+      },
+      "metadata": {
+        "tags": [
+          "person",
+          "minor_typo"
+        ],
+        "notes": "Common typo for a well-known person clue."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "The Fed controls how much money is out there partly by buying or selling T-bills, \"T\" for this cabinet department",
+        "expected_response": "Treasury",
+        "user_response": "treasuries",
+        "user_justification": null
+      },
+      "outputs": {
+        "final_correct": false,
+        "reason_code": "no_match"
+      },
+      "metadata": {
+        "tags": [
+          "non_person",
+          "subset_only"
+        ],
+        "notes": "Plural noun should not be accepted as the cabinet department."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "There are 12 Federal Reserve Banks; the one for the 12th district is based in this city",
+        "expected_response": "San Francisco",
+        "user_response": "San Fran",
+        "user_justification": null
+      },
+      "outputs": {
+        "final_correct": true,
+        "reason_code": "minor_typo_match"
+      },
+      "metadata": {
+        "tags": [
+          "alias",
+          "location"
+        ],
+        "notes": "Informal city alias."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "On Sept. 25, 1961 he told the U.N., Mankind must put an end to war or war will put an end to mankind",
+        "expected_response": "Kennedy",
+        "user_response": "JFK",
+        "user_justification": null
+      },
+      "outputs": {
+        "final_correct": true,
+        "reason_code": "strong_fuzzy_match"
+      },
+      "metadata": {
+        "tags": [
+          "alias",
+          "person"
+        ],
+        "notes": "Common alias for President Kennedy."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "Popular in the South, chess pie is basically this pie without those big brown nuts",
+        "expected_response": "Pecan pie",
+        "user_response": "pecan",
+        "user_justification": null
+      },
+      "outputs": {
+        "final_correct": true,
+        "reason_code": "exact_match"
+      },
+      "metadata": {
+        "tags": [
+          "contextual_short_form"
+        ],
+        "notes": "Pecan clearly refers to a type of pie given clue context."
+      }
+    }
+  ]
+}

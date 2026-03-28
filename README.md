@@ -39,6 +39,39 @@ npm run dev
 
 Frontend defaults to Vite local host; set `VITE_API_BASE_URL` if needed.
 
+## LangSmith Evals
+
+The backend includes a LangSmith eval scaffold for agents.
+
+1. Install backend deps:
+```bash
+cd webapp/backend
+pip install -r requirements.txt
+```
+
+2. Set env vars:
+```bash
+export OPENAI_API_KEY=...
+export LANGSMITH_API_KEY=...
+export LANGSMITH_TRACING=true
+export LANGSMITH_PROJECT=jeopardy-evals
+```
+
+3. Sync the local eval dataset to LangSmith:
+```bash
+cd /path/to/repo/root
+python -m webapp.backend.evals.langsmith_cli sync appeal_judge_v1
+```
+
+4. Run the eval:
+```bash
+cd /path/to/repo/root
+python -m webapp.backend.evals.langsmith_cli run appeal_judge_v1
+```
+
+The local dataset lives in `webapp/backend/evals/datasets/appeal_judge_v1.json`.
+Add new cases there and run `sync` again.
+
 ## Read Next
 
 - Product and local development: [webapp/README.md](webapp/README.md)
