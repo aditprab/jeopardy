@@ -13,7 +13,9 @@ try:
         get_daily_challenge_payload,
         get_daily_leaderboard,
         get_or_create_daily_challenge,
+        precompute_daily_challenge,
         reset_daily_progress,
+        resolve_challenge_date,
         submit_daily_answer,
         submit_daily_final,
         submit_daily_final_wager,
@@ -29,7 +31,9 @@ except ImportError:
         get_daily_challenge_payload,
         get_daily_leaderboard,
         get_or_create_daily_challenge,
+        precompute_daily_challenge,
         reset_daily_progress,
+        resolve_challenge_date,
         submit_daily_answer,
         submit_daily_final,
         submit_daily_final_wager,
@@ -85,6 +89,18 @@ class PlayerProfileRequest(BaseModel):
     leaderboard_name: str
 
 
+class InternalPrecomputeDailyChallengeRequest(BaseModel):
+    date: str = "tomorrow"
+
+
+def _require_internal_token(token: str | None) -> None:
+    expected = os.getenv("INTERNAL_API_TOKEN", "").strip()
+    if not expected:
+        raise HTTPException(status_code=500, detail="INTERNAL_API_TOKEN is not configured")
+    if (token or "").strip() != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 @app.get("/api/daily-challenge")
 def daily_challenge(
     response: Response,
@@ -121,6 +137,19 @@ def daily_answer(
         )
         response.headers["X-Player-Token"] = token
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/internal/precompute-daily-challenge")
+def internal_precompute_daily_challenge(
+    req: InternalPrecomputeDailyChallengeRequest,
+    internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+):
+    _require_internal_token(internal_token)
+    try:
+        target_date = resolve_challenge_date(req.date)
+        return precompute_daily_challenge(target_date)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

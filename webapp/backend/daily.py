@@ -63,6 +63,16 @@ def today_et() -> date:
     return datetime.now(ET_TZ).date()
 
 
+def resolve_challenge_date(raw: str | None) -> date:
+    value = (raw or "tomorrow").strip()
+    normalized = value.lower()
+    if normalized == "today":
+        return today_et()
+    if normalized == "tomorrow":
+        return today_et() + timedelta(days=1)
+    return date.fromisoformat(value)
+
+
 def _copy_default_answers() -> dict[str, list[dict[str, Any] | None]]:
     return {
         "single": [None, None, None, None, None],
@@ -489,6 +499,35 @@ def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
             )
     finally:
         put_conn(conn)
+
+
+def precompute_daily_challenge(challenge_date: date) -> dict[str, Any]:
+    conn = get_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM daily_challenges
+                WHERE challenge_date = %s
+                """,
+                (challenge_date,),
+            )
+            existed = cur.fetchone() is not None
+    finally:
+        put_conn(conn)
+
+    challenge = get_or_create_daily_challenge(challenge_date)
+    return {
+        "challenge_date": challenge.challenge_date.isoformat(),
+        "already_existed": existed,
+        "single_category_name": challenge.single_category_name,
+        "single_clue_ids": challenge.single_clue_ids,
+        "double_category_name": challenge.double_category_name,
+        "double_clue_ids": challenge.double_clue_ids,
+        "final_category_name": challenge.final_category_name,
+        "final_clue_id": challenge.final_clue_id,
+    }
 
 
 def _fetch_clues(cur, clue_ids: list[int]) -> dict[int, dict[str, Any]]:

@@ -36,6 +36,42 @@ Run backend:
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Precompute a future daily challenge:
+
+```bash
+python webapp/backend/scripts/precompute_daily_challenge.py
+```
+
+That script:
+
+- defaults to `tomorrow` in `America/New_York`
+- creates the daily challenge if missing
+- fills any missing hint-context classifier cache rows for its clues
+
+Useful variants:
+
+```bash
+python webapp/backend/scripts/precompute_daily_challenge.py --date today
+python webapp/backend/scripts/precompute_daily_challenge.py --date 2026-03-29
+```
+
+Recommended cron timing for launch-day traffic:
+
+```cron
+55 23 * * * cd /path/to/repo/root && /usr/bin/env python3 webapp/backend/scripts/precompute_daily_challenge.py
+```
+
+Protected internal precompute endpoint:
+
+```bash
+curl -X POST http://localhost:8000/internal/precompute-daily-challenge \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Token: $INTERNAL_API_TOKEN" \
+  -d '{"date":"tomorrow"}'
+```
+
+The `date` field accepts `today`, `tomorrow`, or `YYYY-MM-DD`.
+
 ## Frontend Setup
 
 ```bash

@@ -18,10 +18,12 @@ Code:
 - `webapp/backend/evals/langsmith_registry.py`
 - `webapp/backend/evals/dataset_loader.py`
 - `webapp/backend/evals/appeal_judge.py`
+- `webapp/backend/evals/hint_context_classifier.py`
 
 Starter dataset:
 
 - `webapp/backend/evals/datasets/appeal_judge_v1.json`
+- `webapp/backend/evals/datasets/hint_context_classifier_v1.json`
 
 ## Environment
 
@@ -49,6 +51,7 @@ pip install -r requirements.txt
 ```bash
 cd /path/to/repo/root
 python -m webapp.backend.evals.langsmith_cli sync appeal_judge_v1
+python -m webapp.backend.evals.langsmith_cli sync hint_context_classifier_v1
 ```
 
 This command:
@@ -63,6 +66,7 @@ This command:
 ```bash
 cd /path/to/repo/root
 python -m webapp.backend.evals.langsmith_cli run appeal_judge_v1
+python -m webapp.backend.evals.langsmith_cli run hint_context_classifier_v1
 ```
 
 Optional repetitions:
