@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from . import appeal_judge
+from . import appeal_judge, hint_context_classifier
 
 
 TargetFn = Callable[[dict[str, Any]], dict[str, Any]]
@@ -27,6 +27,15 @@ EVALS: dict[str, EvalDefinition] = {
             appeal_judge.reason_code_correct,
         ],
         experiment_prefix="appeal-judge",
+    ),
+    "hint_context_classifier_v1": EvalDefinition(
+        dataset_name="hint_context_classifier_v1",
+        target=hint_context_classifier.target,
+        evaluators=[
+            hint_context_classifier.decision_correct,
+            hint_context_classifier.reason_code_correct,
+        ],
+        experiment_prefix="hint-context-classifier",
     )
 }
 

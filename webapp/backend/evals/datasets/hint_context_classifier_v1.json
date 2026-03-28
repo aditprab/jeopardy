@@ -1,0 +1,127 @@
+{
+  "dataset_name": "hint_context_classifier_v1",
+  "description": "Starter LangSmith eval dataset for the Jeopardy hint context classifier agent.",
+  "agent_name": "hint_context_classifier",
+  "cases": [
+    {
+      "inputs": {
+        "clue_text": "This current Fed chairman is the author of a book on the Great Depression",
+        "expected_response": "Bernanke",
+        "category": "HAPPY 100th BIRTHDAY, FEDERAL RESERVE!",
+        "air_date": "2013-02-06"
+      },
+      "outputs": {
+        "is_point_in_time": true,
+        "reason_code": "current_officeholder"
+      },
+      "metadata": {
+        "tags": [
+          "positive",
+          "officeholder",
+          "explicit_anchor"
+        ],
+        "notes": "Explicitly uses 'current', so the fair answer depends on air date."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "There are 12 Federal Reserve Banks; the one for the 12th district is based in this city",
+        "expected_response": "San Francisco",
+        "category": "HAPPY 100th BIRTHDAY, FEDERAL RESERVE!",
+        "air_date": "2013-02-06"
+      },
+      "outputs": {
+        "is_point_in_time": false,
+        "reason_code": "not_point_in_time"
+      },
+      "metadata": {
+        "tags": [
+          "negative",
+          "stable_fact",
+          "regression"
+        ],
+        "notes": "Previously misclassified; stable institutional geography should not trigger a hint."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "The Fed controls how much money is out there partly by buying or selling T-bills, \"T\" for this cabinet department",
+        "expected_response": "Treasury",
+        "category": "HAPPY 100th BIRTHDAY, FEDERAL RESERVE!",
+        "air_date": "2013-02-06"
+      },
+      "outputs": {
+        "is_point_in_time": false,
+        "reason_code": "not_point_in_time"
+      },
+      "metadata": {
+        "tags": [
+          "negative",
+          "abbreviation",
+          "regression"
+        ],
+        "notes": "Previously misclassified; abbreviation expansion is not date-sensitive."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "As of 2005, this woman was secretary of state",
+        "expected_response": "Condoleezza Rice",
+        "category": "THE CABINET",
+        "air_date": "2005-11-01"
+      },
+      "outputs": {
+        "is_point_in_time": true,
+        "reason_code": "time_bounded_status"
+      },
+      "metadata": {
+        "tags": [
+          "positive",
+          "officeholder",
+          "explicit_anchor"
+        ],
+        "notes": "The phrase 'As of 2005' makes the answer depend on the time reference."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "This desert mammal can travel long distances without water",
+        "expected_response": "camel",
+        "category": "ANIMALS",
+        "air_date": "2012-03-14"
+      },
+      "outputs": {
+        "is_point_in_time": false,
+        "reason_code": "not_point_in_time"
+      },
+      "metadata": {
+        "tags": [
+          "negative",
+          "plain_fact",
+          "no_anchor"
+        ],
+        "notes": "Ordinary factual clue with no temporal anchor."
+      }
+    },
+    {
+      "inputs": {
+        "clue_text": "The reigning Wimbledon men's singles champion is this Swiss star",
+        "expected_response": "Roger Federer",
+        "category": "TENNIS",
+        "air_date": "2008-07-10"
+      },
+      "outputs": {
+        "is_point_in_time": true,
+        "reason_code": "current_titleholder"
+      },
+      "metadata": {
+        "tags": [
+          "positive",
+          "titleholder",
+          "explicit_anchor"
+        ],
+        "notes": "Reigning champion status is time-sensitive."
+      }
+    }
+  ]
+}
