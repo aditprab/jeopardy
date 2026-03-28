@@ -8,29 +8,14 @@ from uuid import uuid4
 from thefuzz import fuzz
 
 try:
-    from .agent_observability import (
-        add_agent_artifact,
-        create_agent_run,
-        finish_agent_run,
-        log_agent_event,
+    from .agents.appeal_judge import (
+        judge_appeal_llm_only_observed,
     )
     from .answer import check_answer, extract_alternates, normalize
-    from .appeal_judge import (
-        AGENT_NAME,
-        AGENT_VERSION,
-        POLICY_VERSION,
-        judge_appeal_llm_only,
-    )
     from .db import get_conn, put_conn
 except ImportError:
-    from agent_observability import (
-        add_agent_artifact,
-        create_agent_run,
-        finish_agent_run,
-        log_agent_event,
-    )
+    from agents.appeal_judge import judge_appeal_llm_only_observed
     from answer import check_answer, extract_alternates, normalize
-    from appeal_judge import AGENT_NAME, AGENT_VERSION, POLICY_VERSION, judge_appeal_llm_only
     from db import get_conn, put_conn
 
 PAREN_OR = re.compile(r"\(\s*or\b", re.IGNORECASE)
@@ -208,80 +193,26 @@ def grade_and_record(
 
     if det_decision == "defer_to_llm":
         llm_invoked = True
-        llm_start = perf_counter()
-        llm_run_id = create_agent_run(
+        observed = judge_appeal_llm_only_observed(
             cur,
             trace_id=trace_id,
             run_type="initial_answer_judge",
-            agent_name=AGENT_NAME,
-            agent_version=AGENT_VERSION,
-            policy_version=POLICY_VERSION,
-            model=None,
-            prompt_version=None,
-            input_payload={
-                "clue_id": clue_id,
-                "user_response": user_response,
-                "expected_response": expected_response,
-            },
-        )
-        log_agent_event(
-            cur,
-            agent_run_id=llm_run_id,
-            event_type="initial_answer_received",
-            level="info",
-            message="Initial answer sent to judge after deterministic defer.",
-                payload={"clue_id": clue_id},
-            )
-        decision, llm_failure = judge_appeal_llm_only(
+            clue_id=clue_id,
             clue_text=clue_text,
             expected_response=expected_response,
             user_response=user_response,
             user_justification=None,
         )
-        llm_latency_ms = int((perf_counter() - llm_start) * 1000)
+        llm_run_id = observed.run_id
+        llm_latency_ms = observed.latency_ms
+        decision = observed.decision
+        llm_failure = observed.failure
         if decision is not None:
             decision_source = "llm"
             final_correct = decision.final_correct
             llm_confidence = decision.confidence
             llm_reason_code = decision.reason_code
             llm_reason_text = decision.reason
-            cur.execute(
-                "UPDATE agent_runs SET model = %s, prompt_version = %s WHERE id = %s",
-                (decision.model, decision.prompt_version, llm_run_id),
-            )
-            add_agent_artifact(
-                cur,
-                agent_run_id=llm_run_id,
-                artifact_type="decision",
-                content={
-                    "final_correct": decision.final_correct,
-                    "reason_code": decision.reason_code,
-                    "reason": decision.reason,
-                    "confidence": decision.confidence,
-                },
-            )
-            add_agent_artifact(
-                cur,
-                agent_run_id=llm_run_id,
-                artifact_type="model_output",
-                content=decision.raw_output,
-            )
-            finish_agent_run(
-                cur,
-                agent_run_id=llm_run_id,
-                status="completed",
-                output_payload={
-                    "final_correct": decision.final_correct,
-                    "reason_code": decision.reason_code,
-                    "reason": decision.reason,
-                    "confidence": decision.confidence,
-                },
-                guardrail_flags=decision.guardrail_flags,
-                prompt_tokens=decision.usage.get("prompt_tokens"),
-                completion_tokens=decision.usage.get("completion_tokens"),
-                total_tokens=decision.usage.get("total_tokens"),
-                latency_ms=llm_latency_ms,
-            )
         else:
             # Caller-owned fail-closed policy for LLM outages/errors.
             decision_source = "deterministic"
@@ -291,36 +222,6 @@ def grade_and_record(
             llm_reason_text = (
                 f"LLM judge failed ({llm_failure.error_type if llm_failure else 'UnknownError'}); "
                 "auto-rejected by caller policy."
-            )
-            log_agent_event(
-                cur,
-                agent_run_id=llm_run_id,
-                event_type="initial_answer_llm_failed",
-                level="warn",
-                message="LLM judge failed; caller applied fail-closed rejection.",
-                payload={
-                    "error_type": llm_failure.error_type if llm_failure else "UnknownError",
-                    "error_message": llm_failure.error_message if llm_failure else "",
-                },
-            )
-            finish_agent_run(
-                cur,
-                agent_run_id=llm_run_id,
-                status="failed",
-                output_payload={
-                    "final_correct": False,
-                    "reason_code": llm_reason_code,
-                    "reason": llm_reason_text,
-                },
-                guardrail_flags=[
-                    "llm_unavailable_auto_reject",
-                    llm_failure.error_type if llm_failure else "UnknownError",
-                ],
-                error_message=llm_failure.error_message if llm_failure else "LLM judge failed",
-                prompt_tokens=0,
-                completion_tokens=0,
-                total_tokens=0,
-                latency_ms=llm_latency_ms,
             )
 
     final_decision = "correct" if final_correct else "incorrect"
