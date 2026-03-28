@@ -3,14 +3,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from psycopg2.extras import Json
 
 try:
+    from .agents.hint_context_classifier import (
+        AGENT_NAME as HINT_CONTEXT_AGENT_NAME,
+        AGENT_VERSION as HINT_CONTEXT_AGENT_VERSION,
+        POLICY_VERSION as HINT_CONTEXT_POLICY_VERSION,
+        classify_hint_context_llm_only_observed,
+    )
     from .db import get_conn, put_conn
     from .grading import grade_and_record
 except ImportError:
+    from agents.hint_context_classifier import (  # type: ignore[no-redef]
+        AGENT_NAME as HINT_CONTEXT_AGENT_NAME,
+        AGENT_VERSION as HINT_CONTEXT_AGENT_VERSION,
+        POLICY_VERSION as HINT_CONTEXT_POLICY_VERSION,
+        classify_hint_context_llm_only_observed,
+    )
     from db import get_conn, put_conn
     from grading import grade_and_record
 
@@ -61,6 +74,29 @@ def ensure_daily_schema() -> None:
     conn = get_conn()
     try:
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS clue_hint_contexts (
+                    clue_id INT PRIMARY KEY REFERENCES clues(id) ON DELETE CASCADE,
+                    is_point_in_time BOOLEAN NOT NULL,
+                    reason_code TEXT NOT NULL,
+                    confidence NUMERIC(4, 3) NOT NULL,
+                    agent_name TEXT NOT NULL,
+                    agent_version TEXT NOT NULL,
+                    policy_version TEXT NOT NULL,
+                    prompt_version TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    classified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_clue_hint_contexts_point_in_time
+                ON clue_hint_contexts(is_point_in_time)
+                """
+            )
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS player_profiles (
@@ -347,6 +383,8 @@ def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
             )
             row = cur.fetchone()
             if row:
+                _ensure_hint_contexts(cur, list(row[2]) + list(row[4]) + [row[6]])
+                conn.commit()
                 return DailyChallenge(
                     challenge_date=row[0],
                     single_category_name=row[1],
@@ -438,6 +476,7 @@ def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
             row = cur.fetchone()
             if not row:
                 raise ValueError("Failed to create daily challenge")
+            _ensure_hint_contexts(cur, list(row[2]) + list(row[4]) + [row[6]])
             conn.commit()
             return DailyChallenge(
                 challenge_date=row[0],
@@ -455,23 +494,108 @@ def get_or_create_daily_challenge(challenge_date: date) -> DailyChallenge:
 def _fetch_clues(cur, clue_ids: list[int]) -> dict[int, dict[str, Any]]:
     cur.execute(
         """
-        SELECT c.id, c.clue_value, c.answer, c.question, g.air_date
+        SELECT c.id, c.clue_value, c.answer, c.question, g.air_date, chc.is_point_in_time
         FROM clues c
         JOIN games g ON g.id = c.game_id
+        LEFT JOIN clue_hint_contexts chc ON chc.clue_id = c.id
         WHERE c.id = ANY(%s::INT[])
         """,
         (clue_ids,),
     )
     by_id: dict[int, dict[str, Any]] = {}
-    for clue_id, clue_value, clue_text, expected, air_date in cur.fetchall():
+    for clue_id, clue_value, clue_text, expected, air_date, is_point_in_time in cur.fetchall():
         by_id[clue_id] = {
             "id": clue_id,
             "value": clue_value,
             "clue_text": clue_text,
             "expected_response": expected,
             "air_date": air_date.isoformat(),
+            "is_point_in_time": bool(is_point_in_time),
         }
     return by_id
+
+
+def _fetch_hint_context_inputs(cur, clue_ids: list[int]) -> list[dict[str, Any]]:
+    cur.execute(
+        """
+        SELECT c.id, c.answer, c.question, cat.name, g.air_date
+        FROM clues c
+        JOIN categories cat ON cat.id = c.category_id
+        JOIN games g ON g.id = c.game_id
+        LEFT JOIN clue_hint_contexts chc ON chc.clue_id = c.id
+        WHERE c.id = ANY(%s::INT[])
+          AND chc.clue_id IS NULL
+        ORDER BY c.id
+        """,
+        (clue_ids,),
+    )
+    return [
+        {
+            "clue_id": int(row[0]),
+            "clue_text": row[1],
+            "expected_response": row[2],
+            "category": row[3],
+            "air_date": row[4].isoformat(),
+        }
+        for row in cur.fetchall()
+    ]
+
+
+def _ensure_hint_contexts(cur, clue_ids: list[int]) -> None:
+    for agent_input in _fetch_hint_context_inputs(cur, clue_ids):
+        observed = classify_hint_context_llm_only_observed(
+            cur,
+            trace_id=str(uuid4()),
+            run_type="daily_challenge_hint_context",
+            clue_id=agent_input["clue_id"],
+            clue_text=agent_input["clue_text"],
+            expected_response=agent_input["expected_response"],
+            category=agent_input["category"],
+            air_date=agent_input["air_date"],
+        )
+        if observed.classification is None:
+            continue
+        classification = observed.classification
+        cur.execute(
+            """
+            INSERT INTO clue_hint_contexts (
+                clue_id,
+                is_point_in_time,
+                reason_code,
+                confidence,
+                agent_name,
+                agent_version,
+                policy_version,
+                prompt_version,
+                model,
+                classified_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now(), now())
+            ON CONFLICT (clue_id)
+            DO UPDATE SET
+                is_point_in_time = EXCLUDED.is_point_in_time,
+                reason_code = EXCLUDED.reason_code,
+                confidence = EXCLUDED.confidence,
+                agent_name = EXCLUDED.agent_name,
+                agent_version = EXCLUDED.agent_version,
+                policy_version = EXCLUDED.policy_version,
+                prompt_version = EXCLUDED.prompt_version,
+                model = EXCLUDED.model,
+                updated_at = now()
+            """,
+            (
+                agent_input["clue_id"],
+                classification.is_point_in_time,
+                classification.reason_code,
+                classification.confidence,
+                HINT_CONTEXT_AGENT_NAME,
+                HINT_CONTEXT_AGENT_VERSION,
+                HINT_CONTEXT_POLICY_VERSION,
+                classification.prompt_version,
+                classification.model,
+            ),
+        )
 
 
 def _normalize_leaderboard_name(value: str) -> str:
@@ -648,6 +772,7 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
                         "value": c["value"],
                         "clue_text": c["clue_text"],
                         "air_date": c["air_date"],
+                        "is_point_in_time": c["is_point_in_time"],
                     }
                     for c in single_clues
                 ],
@@ -660,6 +785,7 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
                         "value": c["value"],
                         "clue_text": c["clue_text"],
                         "air_date": c["air_date"],
+                        "is_point_in_time": c["is_point_in_time"],
                     }
                     for c in double_clues
                 ],
@@ -669,6 +795,7 @@ def get_daily_challenge_payload(challenge: DailyChallenge, player_token: str) ->
                 "category": challenge.final_category_name,
                 "clue_text": final_clue_text,
                 "air_date": final_clue["air_date"],
+                "is_point_in_time": final_clue["is_point_in_time"],
             },
             "player": _serialize_player_profile(player_profile),
             "progress": _serialize_progress(progress),

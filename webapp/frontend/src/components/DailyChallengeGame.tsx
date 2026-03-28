@@ -594,6 +594,9 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 </div>
                 <div className="daily-value">${clue.clue.value.toLocaleString()}</div>
                 <div className="clue-air-date">Aired on: {formatAirDate(clue.clue.air_date)}</div>
+                {clue.clue.is_point_in_time && (
+                  <div className="clue-context-hint">Answer might be based on original air date.</div>
+                )}
                 <div className="clue-text">{clue.clue.clue_text}</div>
 
                 {answerResult ? (
@@ -650,6 +653,9 @@ export default function DailyChallengeGame({ onBack }: DailyChallengeGameProps) 
                 <div className="dd-banner">FINAL JEOPARDY</div>
                 <div className="clue-category">The category is: {challenge.final_clue.category}</div>
                 <div className="clue-air-date">Aired on: {formatAirDate(challenge.final_clue.air_date)}</div>
+                {challenge.final_clue.is_point_in_time && (
+                  <div className="clue-context-hint">Answer might be based on original air date.</div>
+                )}
                 {challenge.progress.final.wager === null ? (
                   <>
                     <div className="wager-prompt">Enter wager (0 - ${maxWager.toLocaleString()})</div>

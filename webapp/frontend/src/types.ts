@@ -3,6 +3,7 @@ export interface DailyClue {
   value: number;
   clue_text: string;
   air_date: string;
+  is_point_in_time: boolean;
 }
 
 export interface DailyCategory {
@@ -15,6 +16,7 @@ export interface DailyFinalClue {
   category: string;
   clue_text: string | null;
   air_date: string;
+  is_point_in_time: boolean;
 }
 
 export interface DailyProgressAnswer {

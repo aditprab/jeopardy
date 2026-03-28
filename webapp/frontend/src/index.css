@@ -659,6 +659,19 @@ body {
   letter-spacing: 0.45px;
 }
 
+.clue-context-hint {
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 207, 112, 0.34);
+  background: rgba(255, 207, 112, 0.1);
+  color: #ffe3ad;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.15px;
+}
+
 /* Inputs */
 .response-input {
   width: 100%;

@@ -118,6 +118,22 @@ CREATE INDEX idx_agent_runs_trace_id ON agent_runs(trace_id);
 CREATE INDEX idx_agent_runs_run_type ON agent_runs(run_type);
 CREATE INDEX idx_agent_events_run_id ON agent_run_events(agent_run_id);
 CREATE INDEX idx_agent_artifacts_run_id ON agent_run_artifacts(agent_run_id);
+
+CREATE TABLE clue_hint_contexts (
+    clue_id INT PRIMARY KEY REFERENCES clues(id) ON DELETE CASCADE,
+    is_point_in_time BOOLEAN NOT NULL,
+    reason_code TEXT NOT NULL,
+    confidence NUMERIC(4, 3) NOT NULL,
+    agent_name TEXT NOT NULL,
+    agent_version TEXT NOT NULL,
+    policy_version TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    model TEXT NOT NULL,
+    classified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_clue_hint_contexts_point_in_time ON clue_hint_contexts(is_point_in_time);
 CREATE INDEX idx_answer_attempts_clue_id ON answer_attempts(clue_id);
 CREATE INDEX idx_answer_attempts_created_at ON answer_attempts(created_at);
 CREATE INDEX idx_answer_appeals_status ON answer_appeals(status);
